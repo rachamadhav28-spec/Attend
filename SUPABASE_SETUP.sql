@@ -28,4 +28,14 @@ create policy "Users can insert own backup"
 
 create policy "Users can update own backup"
   on public.user_backups for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete own backup"
+  on public.user_backups for delete
   using (auth.uid() = user_id);
+
+-- If you already ran the old script, run only these two:
+-- drop policy if exists "Users can update own backup" on public.user_backups;
+-- create policy "Users can update own backup" on public.user_backups for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- create policy "Users can delete own backup" on public.user_backups for delete using (auth.uid() = user_id);

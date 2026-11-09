@@ -258,6 +258,21 @@ class CloudBackupService {
     } catch (_) {}
   }
 
+  /// Deletes this account's cloud backup. Needs the delete policy in
+  /// SUPABASE_SETUP.sql.
+  static Future<bool> deleteBackup() async {
+    final c = _client;
+    final u = c?.auth.currentUser;
+    if (c == null || u == null) return false;
+    try {
+      await c.from('user_backups').delete().eq('user_id', u.id);
+      return true;
+    } catch (e) {
+      lastError = e.toString();
+      return false;
+    }
+  }
+
   static Future<bool> syncUserToFirestore({
     required String email,
     required String userName,
@@ -1678,6 +1693,52 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Now using $email')),
+    );
+  }
+
+  Future<void> _deleteMyData() async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: const Text('Delete my data?'),
+        content: Text(
+          'This erases all subjects, attendance and holidays on this phone'
+          '${CloudBackupService.user != null ? ' and your cloud backup' : ''}. '
+          'It cannot be undone.',
+          style: TextStyle(color: AppColors.muted),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.bad),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete everything'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final cur = CloudBackupService.user;
+    var cloudNote = '';
+    if (cur != null) {
+      final done = await CloudBackupService.deleteBackup();
+      cloudNote = done ? '' : ' Cloud backup could not be deleted.';
+      final p = await SharedPreferences.getInstance();
+      await p.remove('acct_data_${cur.id}');
+    }
+    await AccountStore.clear();
+    await CloudBackupService.signOut();
+    await _loadAllData();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Your data was deleted.$cloudNote')),
     );
   }
 
@@ -3500,6 +3561,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           child: const Text('Sign out'),
                         ),
                       ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: _deleteMyData,
+                        child: Text('Delete my data',
+                            style: TextStyle(color: AppColors.bad)),
+                      ),
+                    ),
                   ],
                 );
               },
