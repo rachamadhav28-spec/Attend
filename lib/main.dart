@@ -3362,22 +3362,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       children: [
         FadeSlideIn(
           child: SoftCard(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('Dark mode',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600, color: AppColors.ink)),
-              secondary: Icon(Icons.dark_mode_outlined,
-                  color: AppColors.primary),
-              value: AppColors.isDark,
-              onChanged: (v) => setPalette(v ? 1 : 0),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        FadeSlideIn(
-          child: SoftCard(
             child: Column(
               children: [
                 _profileRow('Course', _course),

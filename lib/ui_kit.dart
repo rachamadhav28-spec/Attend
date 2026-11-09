@@ -35,18 +35,6 @@ const List<Palette> kPalettes = [
       line: Color(0xFFE2DEA8),
       accent: Color(0xFFFFFDD0),
       peach: Color(0xFF9DBB9F)),
-  Palette('Night',
-      dark: true,
-      surface: Color(0xFF1A1A1A),
-      primary: Color(0xFF337418),
-      primarySoft: Color(0xFF4A9A2A),
-      ink: Color(0xFFEDEDED),
-      muted: Color(0xFFA3A3A3),
-      bg: Color(0xFF0F0F0F),
-      tint: Color(0xFF22301B),
-      line: Color(0xFF2C2C2C),
-      accent: Color(0xFFFFFDD0),
-      peach: Color(0xFF5C7A4A)),
 ];
 
 class AppColors {
@@ -87,7 +75,7 @@ Future<void> setPalette(int i) async {
 Future<void> loadPalette() async {
   try {
     final i = (await SharedPreferences.getInstance()).getInt('palette') ?? 0;
-    AppColors.index = i.clamp(0, kPalettes.length - 1);
+    AppColors.index = 0;
   } catch (_) {}
 }
 
