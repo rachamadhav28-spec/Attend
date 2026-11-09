@@ -20,7 +20,7 @@ import 'ui_kit.dart';
 // ============================================================================
 // PASTE YOUR SUPABASE KEYS HERE (or share them with me and I will fill them in)
 // ============================================================================
-const String kSupabaseUrl = 'https://mxbysipquzookuwbqspz.supabase.co';
+const String kSupabaseUrl = 'https://carzbtnhfkunhluqsxyf.supabase.co';
 const String kSupabaseAnonKey = 'sb_publishable_a1eoDEK8i-IjBFTBBdivvg_h9wSqMi3';
 /// Web OAuth client ID from Google Cloud (the same one given to Supabase).
 /// When set, sign-in happens inside the app with Google's account sheet.
