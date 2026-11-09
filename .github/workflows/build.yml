@@ -1,0 +1,121 @@
+name: Build AttendTrack APK & AAB
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter (Latest Stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Generate Android Platform Files
+        run: |
+          flutter create --org com.madhav --project-name attendtrack .
+
+      - name: Move Root google-services.json & Set Android SDK versions
+        run: |
+          if [ -f "google-services.json" ]; then
+            cp google-services.json android/app/google-services.json
+          else
+            echo "WARNING: google-services.json not found in root!"
+          fi
+          for f in android/app/build.gradle android/app/build.gradle.kts; do
+            [ -f "$f" ] && sed -i -e 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' -e 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' "$f"
+          done
+          true
+
+      - name: Android permissions, Firebase plugin and signing key
+        run: |
+          # Same signing key every build so Google Sign-In SHA-1 stays valid
+          mkdir -p ~/.android
+          if [ -f debug.keystore ]; then cp debug.keystore ~/.android/debug.keystore; fi
+          python3 - <<'PY'
+          import glob, re
+          # 1) Camera + internet permissions (flutter create leaves them out of release)
+          m = 'android/app/src/main/AndroidManifest.xml'
+          t = open(m).read()
+          perms = ('<uses-permission android:name="android.permission.INTERNET"/>\n'
+                   '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>\n'
+                   '    <uses-permission android:name="android.permission.CAMERA"/>\n'
+                   '    <uses-feature android:name="android.hardware.camera" android:required="false"/>\n'
+                   '    <application')
+          if 'android.permission.CAMERA' not in t:
+              t = t.replace('<application', perms, 1)
+          t = re.sub(r'android:label="[^"]*"', 'android:label="AttendTrack"', t, count=1)
+          deep_link = '''            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.attendtrack" android:host="login-callback" />
+            </intent-filter>
+        </activity>'''
+          if 'io.supabase.attendtrack' not in t:
+              t = t.replace('</activity>', deep_link, 1)
+          open(m, 'w').write(t)
+          # 3) R8: ML Kit text recognition references optional language classes
+          open('android/app/proguard-rules.pro', 'w').write('-dontwarn com.google.mlkit.vision.text.**\n')
+          for f in glob.glob('android/app/build.gradle*'):
+              t = open(f).read()
+              if 'proguard-rules.pro' not in t:
+                  kts = f.endswith('.kts')
+                  rule = ('proguardFiles("proguard-rules.pro")' if kts else "proguardFiles 'proguard-rules.pro'")
+                  t = re.sub(r'(release\s*\{)', r'\1\n            ' + rule, t, count=1)
+                  open(f, 'w').write(t)
+          PY
+          grep -n "permission" android/app/src/main/AndroidManifest.xml
+
+      - name: Force compileSdk 36 for all Android modules
+        run: |
+          mkdir -p ~/.gradle/init.d
+          cat > ~/.gradle/init.d/compile-sdk.gradle <<'EOF'
+          allprojects {
+            afterEvaluate { project ->
+              if (project.hasProperty('android')) {
+                project.android.compileSdkVersion 36
+              }
+            }
+          }
+          EOF
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Generate Custom App Logo Icon
+        run: |
+          if [ -f "assets/icon/app_icon.png" ]; then
+            dart run flutter_launcher_icons || echo "WARNING: icon generation failed, using default icon"
+          fi
+
+      - name: Build Release APK
+        run: flutter build apk --release --no-shrink
+
+      - name: Build Play Store AAB Bundle
+        run: flutter build appbundle --release --no-shrink
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AttendTrack-Release-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload AAB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AttendTrack-PlayStore-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
