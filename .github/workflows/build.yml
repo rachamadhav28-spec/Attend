@@ -40,11 +40,8 @@ jobs:
           done
           true
 
-      - name: Android permissions, Firebase plugin and signing key
+      - name: Android permissions and deep link
         run: |
-          # Same signing key every build so Google Sign-In SHA-1 stays valid
-          mkdir -p ~/.android
-          if [ -f debug.keystore ]; then cp debug.keystore ~/.android/debug.keystore; fi
           python3 - <<'PY'
           import glob, re
           # 1) Camera + internet permissions (flutter create leaves them out of release)
@@ -58,13 +55,13 @@ jobs:
           if 'android.permission.CAMERA' not in t:
               t = t.replace('<application', perms, 1)
           t = re.sub(r'android:label="[^"]*"', 'android:label="AttendTrack"', t, count=1)
-          deep_link = '''            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="io.supabase.attendtrack" android:host="login-callback" />
-            </intent-filter>
-        </activity>'''
+          deep_link = ('<intent-filter>\n'
+                       '    <action android:name="android.intent.action.VIEW" />\n'
+                       '    <category android:name="android.intent.category.DEFAULT" />\n'
+                       '    <category android:name="android.intent.category.BROWSABLE" />\n'
+                       '    <data android:scheme="io.supabase.attendtrack" android:host="login-callback" />\n'
+                       '</intent-filter>\n'
+                       '        </activity>')
           if 'io.supabase.attendtrack' not in t:
               t = t.replace('</activity>', deep_link, 1)
           open(m, 'w').write(t)

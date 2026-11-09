@@ -232,6 +232,7 @@ class CloudBackupService {
       await client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: kAuthRedirectUri,
+        queryParams: const {'prompt': 'select_account'},
       );
 
       final result = await completer.future.timeout(
