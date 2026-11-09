@@ -13,6 +13,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ui_kit.dart';
 
@@ -21,6 +22,9 @@ import 'ui_kit.dart';
 // ============================================================================
 const String kSupabaseUrl = 'https://mxbysipquzookuwbqspz.supabase.co';
 const String kSupabaseAnonKey = 'sb_publishable_a1eoDEK8i-IjBFTBBdivvg_h9wSqMi3';
+/// Web OAuth client ID from Google Cloud (the same one given to Supabase).
+/// When set, sign-in happens inside the app with Google's account sheet.
+const String kGoogleWebClientId = 'PASTE_WEB_CLIENT_ID';
 const String kAuthRedirectUri = 'io.supabase.attendtrack://login-callback/';
 
 Future<void> main() async {
@@ -221,6 +225,35 @@ class CloudBackupService {
         await client.auth.signOut(scope: SignOutScope.local);
       }
 
+      if (!kGoogleWebClientId.startsWith('PASTE_')) {
+        final g = GoogleSignIn(
+            serverClientId: kGoogleWebClientId, scopes: const ['email']);
+        try {
+          await g.signOut(); // forget the last account so the sheet shows
+        } catch (_) {}
+        final acc = await g.signIn();
+        if (acc == null) {
+          lastError = 'Sign-in cancelled.';
+          return null;
+        }
+        final ga = await acc.authentication;
+        if (ga.idToken == null) {
+          lastError = 'Google did not return an ID token. Check the Web client ID.';
+          return null;
+        }
+        final res = await client.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: ga.idToken!,
+          accessToken: ga.accessToken,
+        );
+        final su = res.user;
+        if (su == null) {
+          lastError = 'Supabase did not return a user.';
+          return null;
+        }
+        return CloudUser(su.email, su.id);
+      }
+
       final completer = Completer<CloudUser?>();
       late final StreamSubscription<AuthState> sub;
       sub = client.auth.onAuthStateChange.listen((data) {
@@ -255,6 +288,11 @@ class CloudBackupService {
   static Future<void> signOut() async {
     try {
       await _client?.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {}
+    try {
+      if (!kGoogleWebClientId.startsWith('PASTE_')) {
+        await GoogleSignIn().signOut();
+      }
     } catch (_) {}
   }
 

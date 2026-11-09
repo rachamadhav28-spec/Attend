@@ -90,6 +90,11 @@ jobs:
           }
           EOF
 
+      - name: Use the fixed signing key
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 
