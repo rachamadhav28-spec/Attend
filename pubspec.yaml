@@ -1,0 +1,38 @@
+name: attendtrack
+description: "Attendance Track - Smart 75% Attendance for B.Tech & Degree Students"
+publish_to: 'none'
+version: 1.5.0+6
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.3
+  intl: ^0.19.0
+  qr_flutter: ^4.1.0
+  qr: ^3.0.1
+  mobile_scanner: ^7.0.0
+  google_mlkit_text_recognition: ^0.15.0
+  file_picker: ^8.1.2
+  supabase_flutter: ^2.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#355E3B"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/holiday.png
