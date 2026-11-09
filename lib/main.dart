@@ -328,6 +328,7 @@ class CloudBackupService {
   static Future<Map<String, dynamic>?> restoreUserFromFirestore() async {
     final client = _client;
     final u = client?.auth.currentUser;
+    lastError = '';
     if (client == null || u == null) {
       lastError = 'Not signed in with Google.';
       return null;
@@ -599,8 +600,11 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
     if (data == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No cloud backup found for this Google account yet.'),
+        SnackBar(
+          duration: const Duration(seconds: 10),
+          content: Text(CloudBackupService.lastError.isNotEmpty
+              ? 'Could not read the backup: ${CloudBackupService.lastError}'
+              : 'No cloud backup found for this Google account yet.'),
         ),
       );
       return;
@@ -1046,12 +1050,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       historyLogs: _historyLogs,
     );
 
-    if (showSnack && mounted) {
+    final signedInNow = CloudBackupService.user != null;
+    if ((showSnack || (signedInNow && !cloudOk)) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: Duration(seconds: cloudOk ? 4 : 10),
           content: Text(cloudOk
               ? 'Backed up to cloud ($_userEmail)!'
-              : 'Saved on phone. Sign in with Google in Profile to back up to cloud.'),
+              : signedInNow
+                  ? 'Cloud backup failed: ${CloudBackupService.lastError}'
+                  : 'Saved on phone. Sign in with Google in Profile to back up to cloud.'),
         ),
       );
     }
