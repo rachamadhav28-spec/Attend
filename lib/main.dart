@@ -24,7 +24,8 @@ const String kSupabaseUrl = 'https://mxbysipquzookuwbqspz.supabase.co';
 const String kSupabaseAnonKey = 'sb_publishable_a1eoDEK8i-IjBFTBBdivvg_h9wSqMi3';
 /// Web OAuth client ID from Google Cloud (the same one given to Supabase).
 /// When set, sign-in happens inside the app with Google's account sheet.
-const String kGoogleWebClientId = 'PASTE_WEB_CLIENT_ID';
+const String kGoogleWebClientId =
+    '597428007987-l9933533e9v3ibri8btllvdkki0gniuj.apps.googleusercontent.com';
 const String kAuthRedirectUri = 'io.supabase.attendtrack://login-callback/';
 
 Future<void> main() async {
