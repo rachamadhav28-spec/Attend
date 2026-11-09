@@ -207,7 +207,7 @@ class CloudBackupService {
 
   static String lastError = '';
 
-  static Future<CloudUser?> signInWithGoogle() async {
+  static Future<CloudUser?> signInWithGoogle({bool fresh = true}) async {
     final client = _client;
     if (client == null) {
       lastError = 'Supabase URL & Key are not configured in lib/main.dart yet.';
@@ -216,7 +216,9 @@ class CloudBackupService {
     try {
       final current = client.auth.currentUser;
       if (current != null) {
-        return CloudUser(current.email, current.id);
+        if (!fresh) return CloudUser(current.email, current.id);
+        // Forget the saved session so Google shows the account picker.
+        await client.auth.signOut(scope: SignOutScope.local);
       }
 
       final completer = Completer<CloudUser?>();
@@ -252,7 +254,7 @@ class CloudBackupService {
 
   static Future<void> signOut() async {
     try {
-      await _client?.auth.signOut();
+      await _client?.auth.signOut(scope: SignOutScope.local);
     } catch (_) {}
   }
 
@@ -339,6 +341,94 @@ class CloudBackupService {
       debugPrint('Supabase restore error: $e');
       return null;
     }
+  }
+}
+
+/// Keeps each Google account's attendance data separate on this phone.
+class AccountStore {
+  static const _keys = [
+    'user_name', 'user_email', 'course', 'year', 'state', 'timetable_file',
+    'last_cloud_backup', 'subjects', 'holidays', 'history_logs_v2',
+    'holiday_names', 'hidden_hols', 'is_onboarded',
+  ];
+
+  static Future<List<Map<String, dynamic>>> list() async {
+    final p = await SharedPreferences.getInstance();
+    try {
+      return (jsonDecode(p.getString('accounts') ?? '[]') as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> register(String id, String email) async {
+    final p = await SharedPreferences.getInstance();
+    final l = await list();
+    if (!l.any((a) => a['id'] == id)) l.add({'id': id, 'email': email});
+    await p.setString('accounts', jsonEncode(l));
+  }
+
+  static Future<void> snapshot(String id) async {
+    final p = await SharedPreferences.getInstance();
+    final snap = <String, dynamic>{
+      for (final k in _keys)
+        if (p.get(k) != null) k: p.get(k),
+    };
+    await p.setString('acct_data_$id', jsonEncode(snap));
+  }
+
+  static Future<void> clear() async {
+    final p = await SharedPreferences.getInstance();
+    for (final k in _keys) {
+      await p.remove(k);
+    }
+  }
+
+  /// Loads a saved copy of this account's data. False if there is none.
+  static Future<bool> restore(String id) async {
+    final p = await SharedPreferences.getInstance();
+    final raw = p.getString('acct_data_$id');
+    if (raw == null) return false;
+    await clear();
+    final snap = jsonDecode(raw) as Map<String, dynamic>;
+    for (final e in snap.entries) {
+      final v = e.value;
+      if (v is bool) {
+        await p.setBool(e.key, v);
+      } else if (v is List) {
+        await p.setStringList(e.key, List<String>.from(v));
+      } else if (v is String) {
+        await p.setString(e.key, v);
+      }
+    }
+    return true;
+  }
+
+  /// Writes a cloud backup into local storage (after clear()).
+  static Future<void> applyCloud(Map<String, dynamic> data, String email) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setString('user_name', data['userName'] ?? 'Student');
+    await p.setString('user_email', email);
+    await p.setString('course', data['course'] ?? 'B.Tech');
+    await p.setString('year', data['year'] ?? '2nd Year');
+    await p.setString('state', data['state'] ?? '');
+    await p.setString('holiday_names', data['holidayNames'] ?? '{}');
+    await p.setStringList(
+        'hidden_hols', List<String>.from(data['hiddenHols'] ?? const []));
+    await p.setString(
+        'timetable_file', data['timetableFileName'] ?? 'Restored from Cloud');
+    if (data['holidays'] != null) {
+      await p.setStringList('holidays', List<String>.from(data['holidays']));
+    }
+    if (data['subjects'] != null) {
+      await p.setString('subjects', jsonEncode(data['subjects']));
+    }
+    if (data['historyLogs'] != null) {
+      await p.setString('history_logs_v2', jsonEncode(data['historyLogs']));
+    }
+    await p.setBool('is_onboarded', true);
   }
 }
 
@@ -1552,6 +1642,55 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return h;
   }
 
+  Future<void> _switchAccount() async {
+    final cur = CloudBackupService.user;
+    if (cur != null) {
+      await _saveAllData();
+      await AccountStore.snapshot(cur.id);
+    }
+    final u = await CloudBackupService.signInWithGoogle();
+    if (!mounted) return;
+    if (u == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Could not switch: ${CloudBackupService.lastError}'),
+            duration: const Duration(seconds: 8)),
+      );
+      setState(() {});
+      return;
+    }
+    final email = u.email ?? '';
+    await AccountStore.register(u.id, email);
+    if (!await AccountStore.restore(u.id)) {
+      final data = await CloudBackupService.restoreUserFromFirestore();
+      await AccountStore.clear();
+      if (data != null) {
+        await AccountStore.applyCloud(data, email);
+      } else {
+        final p = await SharedPreferences.getInstance();
+        await p.setString('user_name', email.split('@').first);
+        await p.setString('user_email', email);
+        await p.setBool('is_onboarded', true);
+      }
+    }
+    await _loadAllData();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Now using $email')),
+    );
+  }
+
+  Future<void> _signOutAccount() async {
+    final cur = CloudBackupService.user;
+    if (cur != null) {
+      await _saveAllData();
+      await AccountStore.snapshot(cur.id);
+    }
+    await CloudBackupService.signOut();
+    if (mounted) setState(() {});
+  }
+
   Future<void> _signInForBackup() async {
     final u = await CloudBackupService.signInWithGoogle();
     if (!mounted) return;
@@ -1564,6 +1703,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       return;
     }
     setState(() => _userEmail = u.email ?? _userEmail);
+    await AccountStore.register(u.id, u.email ?? '');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_email', _userEmail);
     await _saveAllData(showSnack: true);
@@ -3288,6 +3428,81 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FadeSlideIn(
+          index: 3,
+          child: SoftCard(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: AccountStore.list(),
+              builder: (context, snap) {
+                final accounts = snap.data ?? const <Map<String, dynamic>>[];
+                final curId = CloudBackupService.user?.id;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      Icon(Icons.people_alt_outlined,
+                          color: AppColors.primary),
+                      const SizedBox(width: 8),
+                      Text('Accounts',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.ink)),
+                    ]),
+                    const SizedBox(height: 8),
+                    if (accounts.isEmpty)
+                      Text('Sign in to add an account.',
+                          style: TextStyle(
+                              fontSize: 13, color: AppColors.muted)),
+                    for (final a in accounts)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.tint,
+                          child: Text(
+                              ((a['email'] as String?)?.isNotEmpty ?? false)
+                                  ? (a['email'] as String)[0].toUpperCase()
+                                  : '?',
+                              style: TextStyle(color: AppColors.primary)),
+                        ),
+                        title: Text(a['email'] as String? ?? '',
+                            style: TextStyle(
+                                fontSize: 14, color: AppColors.ink)),
+                        trailing: a['id'] == curId
+                            ? Icon(Icons.check_circle,
+                                color: AppColors.good, size: 20)
+                            : TextButton(
+                                onPressed: _switchAccount,
+                                child: const Text('Switch')),
+                      ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: PressScale(
+                        child: OutlinedButton.icon(
+                          onPressed: _switchAccount,
+                          icon: const Icon(Icons.swap_horiz_rounded),
+                          label: const Text('Add or switch account'),
+                        ),
+                      ),
+                    ),
+                    if (signedIn)
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: _signOutAccount,
+                          child: const Text('Sign out'),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
         ),
