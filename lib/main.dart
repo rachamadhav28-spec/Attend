@@ -282,6 +282,13 @@ class CloudBackupService {
       return result;
     } catch (e) {
       lastError = e.toString();
+      if (lastError.contains('sign_in_failed') &&
+          RegExp(r'\b10\b').hasMatch(lastError)) {
+        lastError = 'Google rejected this build (error 10). The Android '
+            'client in Google Cloud must use package com.madhav.attendtrack '
+            'and SHA-1 1A:10:EF:5A:EE:24:39:C7:32:EF:CB:55:E5:6F:96:A3:B1:D2:55:F3. '
+            '[$e]';
+      }
       return null;
     }
   }
@@ -643,7 +650,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
           duration: const Duration(seconds: 10),
           content: Text(CloudBackupService.lastError.isNotEmpty
               ? 'Could not read the backup: ${CloudBackupService.lastError}'
-              : 'No cloud backup found for this Google account yet.'),
+              : 'Signed in as $email. Fill in your details and tap Continue.'),
         ),
       );
       return;
@@ -739,6 +746,61 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
           ],
         ),
         children: [
+          FadeSlideIn(
+            index: 0,
+            child: SoftCard(
+              color: AppColors.tint,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.account_circle_outlined, color: AppColors.primary),
+                      SizedBox(width: 8),
+                      Text(
+                        'Sign in with Google',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'New or returning, just sign in. If you have a saved backup it comes back; if not, fill in your details below.',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: PressScale(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: AppColors.primary,
+                        ),
+                        onPressed:
+                            _isRestoring ? null : _handleRestoreFromCloud,
+                        icon: _isRestoring
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.login_rounded),
+                        label: Text(_isRestoring
+                            ? 'Signing in...'
+                            : 'Sign in with Google'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           FadeSlideIn(
             child: _fieldLabel('Full name'),
           ),
@@ -874,61 +936,6 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                   icon: const Icon(Icons.arrow_forward_rounded),
                   label: const Text('Continue'),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          FadeSlideIn(
-            index: 8,
-            child: SoftCard(
-              color: AppColors.tint,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.restore_rounded, color: AppColors.primary),
-                      SizedBox(width: 8),
-                      Text(
-                        'Reinstalled the app?',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.ink),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sign in with the Google account you used before to restore your subjects and attendance.',
-                    style: TextStyle(fontSize: 13, color: AppColors.muted),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: PressScale(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primary,
-                        ),
-                        onPressed:
-                            _isRestoring ? null : _handleRestoreFromCloud,
-                        icon: _isRestoring
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.login_rounded),
-                        label: Text(_isRestoring
-                            ? 'Restoring...'
-                            : 'Sign in with Google and restore'),
-                      ),
-                    ),
-                  ),
-                ],
               ),
             ),
           ),
