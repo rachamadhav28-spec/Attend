@@ -107,6 +107,12 @@ jobs:
       - name: Build Release APK
         run: flutter build apk --release --no-shrink
 
+      - name: Print APK signing info
+        run: |
+          keytool -printcert -jarfile build/app/outputs/flutter-apk/app-release.apk | grep -E "Owner|SHA1"
+          grep -o 'applicationId[^\n]*' android/app/build.gradle* || true
+          echo "Keystore in use:"; keytool -list -v -keystore ~/.android/debug.keystore -storepass android | grep -E "Alias|SHA1"
+
       - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release --no-shrink
 
