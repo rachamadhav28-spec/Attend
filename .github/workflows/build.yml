@@ -129,6 +129,9 @@ jobs:
           PY
           grep -n "fixed" android/app/build.gradle*
 
+      - name: Add home screen widget
+        run: python3 tools/add_widgets.py
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 

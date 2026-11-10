@@ -1069,6 +1069,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _historyLogs =
           decodedLogs.map((e) => AttendanceLogItem.fromJson(e)).toList();
     });
+    _updateHomeWidgets();
+  }
+
+  Future<void> _updateHomeWidgets() async {
+    try {
+      await const MethodChannel('attendtrack/widget').invokeMethod('update', {
+        'pct': _overallPct.round(),
+        'status': _overallPct >= 75.0 ? 'Safe zone' : 'Below 75%',
+      });
+    } catch (_) {}
   }
 
   Future<void> _saveAllData({bool showSnack = false}) async {
@@ -1084,6 +1094,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     await prefs.setString('last_cloud_backup', nowStr);
 
     setState(() => _lastBackup = nowStr);
+    _updateHomeWidgets();
 
     final cloudOk = await CloudBackupService.syncUserToFirestore(
       email: _userEmail,
