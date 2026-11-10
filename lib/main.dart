@@ -2245,154 +2245,162 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final ok = sub.percentage >= 75.0;
     final flash = _flashIdx == i;
     final pctColor = ok ? AppColors.good : AppColors.bad;
+    final missed = (sub.totalHours - sub.attendedHours).clamp(0, 99999);
     final slot = _activeWeekdayShort == 'All'
         ? sub.scheduleSlot
         : sub.slotFor(_activeWeekdayShort);
+    Widget stat(String v, String label, Color c) => Expanded(
+          child: Column(
+            children: [
+              Text(v,
+                  style: TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.w700, color: c)),
+              const SizedBox(height: 2),
+              Text(label,
+                  style: TextStyle(fontSize: 12, color: AppColors.muted)),
+            ],
+          ),
+        );
     return FadeSlideIn(
       key: ValueKey('${sub.name}-$_selectedDayMode-$i'),
       index: order,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Container(
-          decoration: BoxDecoration(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
             color: AppColors.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border(left: BorderSide(color: pctColor, width: 6)),
-          ),
-          padding: const EdgeInsets.fromLTRB(14, 14, 8, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(sub.name,
-                            style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.ink)),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 6,
-                          runSpacing: 4,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  color: AppColors.primary,
+                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.tint,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(slot,
-                                  style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary)),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(sub.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700)),
+                                ),
+                                IconButton(
+                                  onPressed: () =>
+                                      _showEditSingleSubjectDialog(i),
+                                  icon: const Icon(Icons.edit_outlined,
+                                      size: 16, color: Colors.white70),
+                                  tooltip: 'Edit subject',
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ],
                             ),
-                            Text(sub.days.join(' · '),
-                                style: TextStyle(
-                                    fontSize: 12, color: AppColors.muted)),
+                            const SizedBox(height: 4),
+                            Text('$slot  ·  ${sub.days.join(' ')}',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 12)),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showSubjectAttendanceLog(sub),
+                        child: PctRing(
+                          pct: sub.percentage,
+                          size: 56,
+                          stroke: 6,
+                          color: ok ? AppColors.accent : const Color(0xFFFFB4AB),
+                          track: Colors.white24,
+                          textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                   ),
-                  GestureDetector(
-                    onTap: () => _showSubjectAttendanceLog(sub),
-                    child: Text.rich(TextSpan(
-                      text: sub.percentage.round().toString(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
+                    children: [
+                      stat('${sub.attendedHours}', 'Attended', AppColors.good),
+                      stat('$missed', 'Missed', AppColors.bad),
+                      stat('${sub.totalHours}', 'Total', AppColors.ink),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Center(
+                    child: Text(
+                      ok
+                          ? 'Safe to skip ${sub.safeBunks} classes'
+                          : 'Attend next ${sub.classesNeededFor75} classes for 75%',
                       style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
-                          height: 1,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                           color: pctColor),
-                      children: const [
-                        TextSpan(text: '%', style: TextStyle(fontSize: 16))
-                      ],
-                    )),
+                    ),
                   ),
-                  IconButton(
-                    onPressed: () => _showEditSingleSubjectDialog(i),
-                    icon: Icon(Icons.edit_outlined,
-                        size: 18, color: AppColors.muted),
-                    tooltip: 'Edit subject',
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(right: 6),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: ok ? AppColors.goodSoft : AppColors.badSoft,
-                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(
-                  ok
-                      ? 'Safe to skip ${sub.safeBunks} classes  ·  ${sub.attendedHours}/${sub.totalHours} classes'
-                      : 'Attend next ${sub.classesNeededFor75} classes for 75%  ·  ${sub.attendedHours}/${sub.totalHours} classes',
-                  style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: pctColor),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: PressScale(
-                        child: FilledButton(
-                          onPressed: () => _mark(i, true),
-                          child: AnimatedSwitcher(
-                            duration: kFast,
-                            transitionBuilder: (c, a) =>
-                                ScaleTransition(scale: a, child: c),
-                            child: (flash && _flashPresent)
-                                ? const Icon(Icons.check_rounded,
-                                    key: ValueKey('p-check'))
-                                : const Text('Present',
-                                    key: ValueKey('p-text')),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: PressScale(
+                          child: FilledButton(
+                            onPressed: () => _mark(i, true),
+                            child: AnimatedSwitcher(
+                              duration: kFast,
+                              transitionBuilder: (c, a) =>
+                                  ScaleTransition(scale: a, child: c),
+                              child: (flash && _flashPresent)
+                                  ? const Icon(Icons.check_rounded,
+                                      key: ValueKey('p-check'))
+                                  : const Text('Present',
+                                      key: ValueKey('p-text')),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: PressScale(
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.tint,
-                            foregroundColor: AppColors.primary,
-                          ),
-                          onPressed: () => _mark(i, false),
-                          child: AnimatedSwitcher(
-                            duration: kFast,
-                            transitionBuilder: (c, a) =>
-                                ScaleTransition(scale: a, child: c),
-                            child: (flash && !_flashPresent)
-                                ? const Icon(Icons.close_rounded,
-                                    key: ValueKey('a-x'))
-                                : const Text('Absent',
-                                    key: ValueKey('a-text')),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: PressScale(
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.tint,
+                              foregroundColor: AppColors.primary,
+                            ),
+                            onPressed: () => _mark(i, false),
+                            child: AnimatedSwitcher(
+                              duration: kFast,
+                              transitionBuilder: (c, a) =>
+                                  ScaleTransition(scale: a, child: c),
+                              child: (flash && !_flashPresent)
+                                  ? const Icon(Icons.close_rounded,
+                                      key: ValueKey('a-x'))
+                                  : const Text('Absent',
+                                      key: ValueKey('a-text')),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
