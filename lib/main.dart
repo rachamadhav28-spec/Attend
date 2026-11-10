@@ -1097,15 +1097,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     );
 
     final signedInNow = CloudBackupService.user != null;
-    if ((showSnack || (signedInNow && !cloudOk)) && mounted) {
+    // Say nothing when it works; only speak up when a backup fails.
+    if (!cloudOk && (signedInNow || showSnack) && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          duration: Duration(seconds: cloudOk ? 4 : 10),
-          content: Text(cloudOk
-              ? 'Backed up to cloud ($_userEmail)!'
-              : signedInNow
-                  ? 'Cloud backup failed: ${CloudBackupService.lastError}'
-                  : 'Saved on phone. Sign in with Google in Profile to back up to cloud.'),
+          duration: const Duration(seconds: 10),
+          content: Text(signedInNow
+              ? 'Cloud backup failed: ${CloudBackupService.lastError}'
+              : 'Saved on phone. Sign in with Google in Profile to back up to cloud.'),
         ),
       );
     }
