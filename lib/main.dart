@@ -14,6 +14,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ui_kit.dart';
 
@@ -1069,6 +1070,18 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _historyLogs =
           decodedLogs.map((e) => AttendanceLogItem.fromJson(e)).toList();
     });
+    _updateHomeWidgets();
+  }
+
+  Future<void> _updateHomeWidgets() async {
+    try {
+      final pct = _overallPct.round();
+      await HomeWidget.saveWidgetData<int>('overall_pct', pct);
+      await HomeWidget.saveWidgetData<String>(
+          'overall_status', _overallPct >= 75.0 ? 'Safe zone' : 'Below 75%');
+      await HomeWidget.updateWidget(
+          qualifiedAndroidName: 'com.madhav.attendtrack.AttendRingWidget');
+    } catch (_) {}
   }
 
   Future<void> _saveAllData({bool showSnack = false}) async {
@@ -1084,6 +1097,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     await prefs.setString('last_cloud_backup', nowStr);
 
     setState(() => _lastBackup = nowStr);
+    _updateHomeWidgets();
 
     final cloudOk = await CloudBackupService.syncUserToFirestore(
       email: _userEmail,
