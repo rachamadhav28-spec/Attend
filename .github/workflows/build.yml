@@ -95,6 +95,40 @@ jobs:
           mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
 
+      - name: Sign release builds with the fixed key
+        run: |
+          cp debug.keystore android/app/fixed.keystore
+          python3 - <<'PY'
+          import glob, re
+          for f in glob.glob('android/app/build.gradle*'):
+              t = open(f).read()
+              kts = f.endswith('.kts')
+              if 'fixed.keystore' not in t:
+                  if kts:
+                      blk = ('    signingConfigs {\n'
+                             '        create("fixed") {\n'
+                             '            storeFile = file("fixed.keystore")\n'
+                             '            storePassword = "android"\n'
+                             '            keyAlias = "androiddebugkey"\n'
+                             '            keyPassword = "android"\n'
+                             '        }\n'
+                             '    }\n')
+                  else:
+                      blk = ('    signingConfigs {\n'
+                             '        fixed {\n'
+                             '            storeFile file("fixed.keystore")\n'
+                             '            storePassword "android"\n'
+                             '            keyAlias "androiddebugkey"\n'
+                             '            keyPassword "android"\n'
+                             '        }\n'
+                             '    }\n')
+                  t = t.replace('    buildTypes {', blk + '    buildTypes {', 1)
+                  t = re.sub(r'signingConfig\s*=?\s*signingConfigs\.(getByName\("debug"\)|debug)',
+                             'signingConfig = signingConfigs.getByName("fixed")' if kts else 'signingConfig signingConfigs.fixed', t)
+                  open(f, 'w').write(t)
+          PY
+          grep -n "fixed" android/app/build.gradle*
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 
