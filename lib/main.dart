@@ -1764,6 +1764,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final cur = CloudBackupService.user;
     if (cur != null) {
       await _saveAllData();
+      await AccountStore.register(cur.id, cur.email ?? '');
       await AccountStore.snapshot(cur.id);
       await AccountStore.saveSession(cur.id);
     }
