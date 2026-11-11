@@ -212,6 +212,26 @@ class CloudBackupService {
 
   static String lastError = '';
 
+  static String? sessionJson() {
+    try {
+      final s = _client?.auth.currentSession;
+      return s == null ? null : jsonEncode(s.toJson());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Re-opens a saved session without asking Google. Null if it expired.
+  static Future<CloudUser?> recover(String json) async {
+    try {
+      final r = await _client?.auth.recoverSession(json);
+      final u = r?.user ?? _client?.auth.currentUser;
+      return u == null ? null : CloudUser(u.email, u.id);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<CloudUser?> signInWithGoogle({bool fresh = true}) async {
     final client = _client;
     if (client == null) {
@@ -430,6 +450,25 @@ class AccountStore {
     final l = await list();
     if (!l.any((a) => a['id'] == id)) l.add({'id': id, 'email': email});
     await p.setString('accounts', jsonEncode(l));
+  }
+
+  static Future<void> saveSession(String id) async {
+    final j = CloudBackupService.sessionJson();
+    if (j == null) return;
+    final p = await SharedPreferences.getInstance();
+    await p.setString('acct_sess_$id', j);
+  }
+
+  static Future<String?> sessionFor(String id) async =>
+      (await SharedPreferences.getInstance()).getString('acct_sess_$id');
+
+  static Future<void> remove(String id) async {
+    final p = await SharedPreferences.getInstance();
+    final l = await list();
+    l.removeWhere((a) => a['id'] == id);
+    await p.setString('accounts', jsonEncode(l));
+    await p.remove('acct_data_$id');
+    await p.remove('acct_sess_$id');
   }
 
   static Future<void> snapshot(String id) async {
@@ -1721,13 +1760,19 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return h;
   }
 
-  Future<void> _switchAccount() async {
+  Future<void> _switchAccount([String? targetId]) async {
     final cur = CloudBackupService.user;
     if (cur != null) {
       await _saveAllData();
       await AccountStore.snapshot(cur.id);
+      await AccountStore.saveSession(cur.id);
     }
-    final u = await CloudBackupService.signInWithGoogle();
+    CloudUser? u;
+    if (targetId != null) {
+      final saved = await AccountStore.sessionFor(targetId);
+      if (saved != null) u = await CloudBackupService.recover(saved);
+    }
+    u ??= await CloudBackupService.signInWithGoogle();
     if (!mounted) return;
     if (u == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1740,6 +1785,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }
     final email = u.email ?? '';
     await AccountStore.register(u.id, email);
+    await AccountStore.saveSession(u.id);
     if (!await AccountStore.restore(u.id)) {
       final data = await CloudBackupService.restoreUserFromFirestore();
       await AccountStore.clear();
@@ -1793,14 +1839,19 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     if (cur != null) {
       final done = await CloudBackupService.deleteBackup();
       cloudNote = done ? '' : ' Cloud backup could not be deleted.';
-      final p = await SharedPreferences.getInstance();
-      await p.remove('acct_data_${cur.id}');
+      await AccountStore.remove(cur.id);
     }
     await AccountStore.clear();
     await CloudBackupService.signOut();
-    await _loadAllData();
+    final others = await AccountStore.list();
     if (!mounted) return;
-    setState(() {});
+    if (others.isEmpty) {
+      // Nobody else on this phone: back to the first-time setup screen.
+      widget.onEditProfileRequested();
+    } else {
+      await _switchAccount(others.first['id'] as String?);
+    }
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Your data was deleted.$cloudNote')),
     );
@@ -1829,6 +1880,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }
     setState(() => _userEmail = u.email ?? _userEmail);
     await AccountStore.register(u.id, u.email ?? '');
+    await AccountStore.saveSession(u.id);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('user_email', _userEmail);
     await _saveAllData(showSnack: true);
@@ -3235,7 +3287,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   Widget _qrBlock(String qrPayload) {
     final h = _qrHash(qrPayload);
-    final style = kQrStyles[(h ~/ 1000000) % kQrStyles.length];
+    const style = kAppQrStyle;
     final code6 = (h % 1000000).toString().padLeft(6, '0');
     final qr = QrImage(QrCode.fromData(
       data: qrPayload,
@@ -3253,20 +3305,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.tint,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            'Theme: ${style.name}',
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary),
-          ),
-        ),
         const SizedBox(height: 4),
         Text(
           code6,
@@ -3595,7 +3633,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                             ? Icon(Icons.check_circle,
                                 color: AppColors.good, size: 20)
                             : TextButton(
-                                onPressed: _switchAccount,
+                                onPressed: () =>
+                                    _switchAccount(a['id'] as String?),
                                 child: const Text('Switch')),
                       ),
                     const SizedBox(height: 8),
@@ -3669,6 +3708,9 @@ class QrStyleSpec {
   const QrStyleSpec(this.name, this.bg, this.fg, this.shape, this.eye,
       {this.grad = false, this.eyeColor, this.leafEyes = false});
 }
+
+const QrStyleSpec kAppQrStyle = QrStyleSpec(
+    'App', Color(0xFFFFFDD0), [Color(0xFF1B3320)], 'mosaic', [1.2, 0.6, 0.5]);
 
 const List<QrStyleSpec> kQrStyles = [
   QrStyleSpec('Leaf', Color(0xFFF1F8EC), [Color(0xFF1F6B2E)], 'leaf',
