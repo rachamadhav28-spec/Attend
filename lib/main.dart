@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'splash.dart';
@@ -1253,6 +1254,78 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return uniqueMap.values.toList();
   }
 
+  Future<List<SubjectModel>> _aiReadTimetable(String path) async {
+    if (CloudBackupService.user == null) {
+      throw Exception('Sign in with Google first. The reader needs your account.');
+    }
+    String b64;
+    try {
+      final bytes = await File(path).readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1280);
+      final img = (await codec.getNextFrame()).image;
+      final png = await img.toByteData(format: ui.ImageByteFormat.png);
+      b64 = base64Encode(png!.buffer.asUint8List());
+    } catch (_) {
+      throw Exception("Couldn't open that picture. Try another one.");
+    }
+    final dynamic data;
+    try {
+      final res = await Supabase.instance.client.functions
+          .invoke('read-timetable', body: {'images': [b64]});
+      data = res.data;
+    } on FunctionException catch (e) {
+      final d = e.details;
+      final code = d is Map ? d['error'] : null;
+      if (code == 'limit') {
+        throw Exception("You've used today's 10 reads. Try again tomorrow, or add subjects by hand.");
+      }
+      if (code == 'busy') {
+        throw Exception('The reader is busy right now. Try again in a few minutes.');
+      }
+      if (code == 'not_configured') {
+        throw Exception('The reader is not switched on yet.');
+      }
+      throw Exception("The reader couldn't read that. Check your internet and try again.");
+    } catch (_) {
+      throw Exception('Check your internet and try again.');
+    }
+    final list = (data is Map ? data['subjects'] : null) as List? ?? [];
+    final out = <SubjectModel>[];
+    for (final raw in list) {
+      if (raw is! Map) continue;
+      final name = (raw['name'] ?? '').toString().trim();
+      if (name.length < 2) continue;
+      final code = (raw['code'] ?? '').toString().trim();
+      final days = <String>[
+        for (final d in (raw['days'] as List? ?? []))
+          if (const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].contains(d.toString())) d.toString()
+      ];
+      final ds = <String, String>{};
+      final slots = raw['slots'];
+      if (slots is Map) {
+        for (final e in slots.entries) {
+          final mm = RegExp(
+                  r'(\d{1,2}):(\d{2})\s*(AM|PM)\s*(?:-|–|to)\s*(\d{1,2}):(\d{2})\s*(AM|PM)')
+              .firstMatch(e.value.toString().toUpperCase());
+          if (mm == null) continue;
+          String p2(String s) => s.padLeft(2, '0');
+          final v =
+              '${p2(mm[1]!)}:${mm[2]} ${mm[3]} - ${p2(mm[4]!)}:${mm[5]} ${mm[6]}';
+          if (kTimeSlots.contains(v) && days.contains(e.key.toString())) {
+            ds[e.key.toString()] = v;
+          }
+        }
+      }
+      out.add(SubjectModel(
+        name: code.isEmpty ? name : '$name ($code)',
+        scheduleSlot: ds.isNotEmpty ? ds.values.first : kTimeSlots.first,
+        days: days,
+        daySlots: ds,
+      ));
+    }
+    return out;
+  }
+
   Future<void> _pickAndReadTimetablePdf() async {
     try {
       final res = await FilePicker.platform.pickFiles(
@@ -1271,43 +1344,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       final path = picked.path;
       if (path != null) {
         try {
-          final grid = await readTimetable(path);
-          extracted = [
-            for (final e in grid)
-              SubjectModel(name: e.name, scheduleSlot: e.slot, days: e.days, daySlots: e.daySlots)
-          ];
-        } catch (e) {
-          debugPrint('Grid reader error: $e');
-        }
-      }
-      if (extracted.isEmpty && path != null) {
-        final rec = TextRecognizer();
-        try {
-          final out = await rec.processImage(InputImage.fromFilePath(path));
-          final skip = RegExp(
-              r'^(mon|tue|wed|thu|fri|sat|sun|day|time|period|break|lunch|recess|lab|class|timetable)[a-z]*\.?$',
-              caseSensitive: false);
-          final timeRx = RegExp(
-              r'(\d{1,2}[:.]\d{2}\s*(?:am|pm)?\s*[-–to]+\s*\d{1,2}[:.]\d{2}\s*(?:am|pm)?)',
-              caseSensitive: false);
-          for (final block in out.blocks) {
-            for (final line in block.lines) {
-              final t = line.text.trim();
-              if (t.length < 3 || t.length > 40 || skip.hasMatch(t)) continue;
-              if (!RegExp(r'^[A-Za-z][A-Za-z0-9\s&\-\(\)\.]+$').hasMatch(t)) {
-                continue;
-              }
-              extracted.add(SubjectModel(
-                  name: t,
-                  scheduleSlot:
-                      timeRx.firstMatch(line.text)?.group(1) ?? '09:30 AM - 10:30 AM',
-                  days: []));
-            }
-          }
-        } catch (e) {
-          debugPrint('OCR error: $e');
-        } finally {
-          rec.close();
+          extracted = await _aiReadTimetable(path);
+        } catch (err) {
+          setState(() => _isReadingTimetable = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(err.toString().replaceFirst('Exception: ', '')),
+              duration: const Duration(seconds: 6)));
+          return;
         }
       }
 
