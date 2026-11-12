@@ -135,7 +135,16 @@ jobs:
       - name: Save the Groq key into Supabase
         continue-on-error: true
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.ATTEND_TRACK1 }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || secrets.ATTEND_TRACK1 }}KEY_1: ${{ secrets.ATTEND_TRACK1 }}
+          KEY_2: ${{ secrets.ATTEND_TRACK2 }}
+          KEY_3: ${{ secrets.ATTEND_TRACK3 }}
+          KEY_4: ${{ secrets.ATTEND_TRACK4 }}
+          KEY_5: ${{ secrets.ATTEND_TRACK5 }}
+          KEY_6: ${{ secrets.ATTEND_TRACK6 }}
+          KEY_7: ${{ secrets.ATTEND_TRACK7 }}
+          KEY_8: ${{ secrets.ATTEND_TRACK8 }}
+          KEY_9: ${{ secrets.ATTEND_TRACK9 }}
+          KEY_10: ${{ secrets.ATTEND_TRACK10}}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: bash tools/set_groq_secret.sh
 
