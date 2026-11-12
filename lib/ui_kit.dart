@@ -3,7 +3,6 @@
 
 import 'dart:math' as _math;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,15 +25,15 @@ class Palette {
 }
 
 const List<Palette> kPalettes = [
-  Palette('Forest & Ivory',
-      primary: Color(0xFF1F4A32),
-      primarySoft: Color(0xFF356B4C),
-      ink: Color(0xFF14291C),
-      muted: Color(0xFF5F6F63),
-      bg: Color(0xFFF6F1E1),
-      tint: Color(0xFFEBE5CF),
-      line: Color(0xFFD9D3BD),
-      accent: Color(0xFFF6F1E1),
+  Palette('Hunter & Cream',
+      primary: Color(0xFF355E3B),
+      primarySoft: Color(0xFF4A7350),
+      ink: Color(0xFF1B3320),
+      muted: Color(0xFF4F6B54),
+      bg: Color(0xFFFFFDD0),
+      tint: Color(0xFFF2EEB6),
+      line: Color(0xFFE2DEA8),
+      accent: Color(0xFFFFFDD0),
       peach: Color(0xFF9DBB9F)),
 ];
 
@@ -96,29 +95,9 @@ class AppTheme {
       surface: AppColors.surface,
       onSurface: AppColors.ink,
     );
-    final base = ThemeData(brightness: scheme.brightness).textTheme;
-    final body = GoogleFonts.interTextTheme(base).apply(
-        bodyColor: AppColors.ink, displayColor: AppColors.ink);
-    final heads = GoogleFonts.plusJakartaSansTextTheme(base);
-    final text = body.copyWith(
-      displayLarge: heads.displayLarge?.copyWith(color: AppColors.ink),
-      displayMedium: heads.displayMedium?.copyWith(color: AppColors.ink),
-      displaySmall: heads.displaySmall?.copyWith(color: AppColors.ink),
-      headlineLarge: heads.headlineLarge?.copyWith(
-          color: AppColors.ink, fontWeight: FontWeight.w700),
-      headlineMedium: heads.headlineMedium?.copyWith(
-          color: AppColors.ink, fontWeight: FontWeight.w700),
-      headlineSmall: heads.headlineSmall?.copyWith(
-          color: AppColors.ink, fontWeight: FontWeight.w700),
-      titleLarge: heads.titleLarge?.copyWith(
-          color: AppColors.ink, fontWeight: FontWeight.w700),
-      titleMedium: heads.titleMedium?.copyWith(
-          color: AppColors.ink, fontWeight: FontWeight.w600),
-    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      textTheme: text,
       scaffoldBackgroundColor: AppColors.bg,
       pageTransitionsTheme: const PageTransitionsTheme(builders: {
         TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),

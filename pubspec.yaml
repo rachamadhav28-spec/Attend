@@ -16,7 +16,6 @@ dependencies:
   mobile_scanner: ^7.0.0
   google_mlkit_text_recognition: ^0.15.0
   file_picker: ^8.1.2
-  google_fonts: ^6.2.1
   supabase_flutter: ^2.8.0
   google_sign_in: ^6.2.1
 
@@ -31,7 +30,7 @@ flutter_launcher_icons:
   ios: false
   image_path: "assets/icon/app_icon.png"
   min_sdk_android: 21
-  adaptive_icon_background: "#1F4A32"
+  adaptive_icon_background: "#355E3B"
   adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
 
 flutter:

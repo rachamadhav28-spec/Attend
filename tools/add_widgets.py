@@ -17,7 +17,7 @@ def w(path, text):
 
 w('res/drawable/widget_bg.xml', '''<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#1F4A32" />
+    <solid android:color="#355E3B" />
     <corners android:radius="28dp" />
 </shape>
 ''')
@@ -124,7 +124,7 @@ class AttendRingWidget : AppWidgetProvider() {
             val r = RectF(stroke, stroke, size - stroke, size - stroke)
             p.color = 0x40FFFFFF
             c.drawArc(r, 0f, 360f, false, p)
-            p.color = if (pct >= 75) 0xFFF6F1E1.toInt() else 0xFFFFB4AB.toInt()
+            p.color = if (pct >= 75) 0xFFFFFDD0.toInt() else 0xFFFFB4AB.toInt()
             c.drawArc(r, -90f, 360f * pct / 100f, false, p)
             return bmp
         }
