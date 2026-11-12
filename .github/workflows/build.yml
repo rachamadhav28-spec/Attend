@@ -132,6 +132,13 @@ jobs:
       - name: Skip the Android lint check that crashes
         run: mkdir -p ~/.gradle/init.d && cp tools/nolint.gradle ~/.gradle/init.d/nolint.gradle
 
+      - name: Save the Groq key into Supabase
+        continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: bash tools/set_groq_secret.sh
+
       - name: Add home screen widget
         run: python3 tools/add_widgets.py
 
