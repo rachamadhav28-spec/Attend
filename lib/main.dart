@@ -13,6 +13,7 @@ import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:pdfx/pdfx.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -1258,20 +1259,40 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     if (CloudBackupService.user == null) {
       throw Exception('Sign in with Google first. The reader needs your account.');
     }
-    String b64;
+    final images = <String>[];
     try {
-      final bytes = await File(path).readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1280);
-      final img = (await codec.getNextFrame()).image;
-      final png = await img.toByteData(format: ui.ImageByteFormat.png);
-      b64 = base64Encode(png!.buffer.asUint8List());
+      if (path.toLowerCase().endsWith('.pdf')) {
+        final doc = await PdfDocument.openFile(path);
+        final n = doc.pagesCount > 3 ? 3 : doc.pagesCount;
+        for (var i = 1; i <= n; i++) {
+          final page = await doc.getPage(i);
+          final w = 1280.0;
+          final img = await page.render(
+              width: w,
+              height: w * page.height / page.width,
+              format: PdfPageImageFormat.png,
+              backgroundColor: '#FFFFFF');
+          await page.close();
+          if (img != null) images.add(base64Encode(img.bytes));
+        }
+        await doc.close();
+      } else {
+        final bytes = await File(path).readAsBytes();
+        final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1280);
+        final img = (await codec.getNextFrame()).image;
+        final png = await img.toByteData(format: ui.ImageByteFormat.png);
+        images.add(base64Encode(png!.buffer.asUint8List()));
+      }
     } catch (_) {
-      throw Exception("Couldn't open that picture. Try another one.");
+      throw Exception("Couldn't open that file. Try another one.");
+    }
+    if (images.isEmpty) {
+      throw Exception("Couldn't open that file. Try another one.");
     }
     final dynamic data;
     try {
       final res = await Supabase.instance.client.functions
-          .invoke('read-timetable', body: {'images': [b64]});
+          .invoke('read-timetable', body: {'images': images});
       data = res.data;
     } on FunctionException catch (e) {
       final d = e.details;
@@ -1330,7 +1351,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     try {
       final res = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg'],
+        allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
       );
       if (res == null || res.files.isEmpty) return;
 
