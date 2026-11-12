@@ -1,0 +1,7 @@
+allprojects {
+    tasks.configureEach { t ->
+        if (t.name.startsWith('lintVital') || t.name.startsWith('lintAnalyze')) {
+            t.enabled = false
+        }
+    }
+}

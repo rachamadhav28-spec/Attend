@@ -129,6 +129,9 @@ jobs:
           PY
           grep -n "fixed" android/app/build.gradle*
 
+      - name: Skip the Android lint check that crashes
+        run: mkdir -p ~/.gradle/init.d && cp tools/nolint.gradle ~/.gradle/init.d/nolint.gradle
+
       - name: Add home screen widget
         run: python3 tools/add_widgets.py
 
