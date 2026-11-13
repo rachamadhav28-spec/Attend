@@ -1127,6 +1127,31 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _historyLogs =
           decodedLogs.map((e) => AttendanceLogItem.fromJson(e)).toList();
     });
+    // Old marks counted every slot as 1 class. Fix them from their time slot.
+    var fixed = false;
+    for (var k = 0; k < _historyLogs.length; k++) {
+      final l = _historyLogs[k];
+      final h = slotHours(l.slot);
+      if (l.hours != 1 || h <= 1) continue;
+      final si = _subjects.indexWhere((s) => s.name == l.subject);
+      if (si != -1) {
+        _subjects[si].totalHours += h - 1;
+        if (l.present) _subjects[si].attendedHours += h - 1;
+      }
+      _historyLogs[k] = AttendanceLogItem(
+          id: l.id,
+          subject: l.subject,
+          present: l.present,
+          hours: h,
+          dateKey: l.dateKey,
+          timeStr: l.timeStr,
+          slot: l.slot);
+      fixed = true;
+    }
+    if (fixed) {
+      setState(() {});
+      _saveAllData();
+    }
     _updateHomeWidgets();
   }
 
@@ -2299,8 +2324,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     const SizedBox(height: 8),
                     Text(
                       isSafe
-                          ? 'You can skip $_overallSafeBunks more hours.'
-                          : 'Attend the next $_overallNeededFor75 hours to reach 75%.',
+                          ? 'You can skip $_overallSafeBunks more classes.'
+                          : 'Attend the next $_overallNeededFor75 classes to reach 75%.',
                       style: const TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ],
@@ -3346,7 +3371,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                                   style: TextStyle(
                                       fontSize: 12, color: AppColors.primary)),
                             Text(
-                              '${item.present ? "Present" : "Absent"} (${item.hours}h) • ${item.timeStr}',
+                              '${item.present ? "Present" : "Absent"} (${item.hours} ${item.hours == 1 ? "class" : "classes"}) • ${item.timeStr}',
                               style: TextStyle(
                                   fontSize: 13, color: AppColors.muted),
                             ),
