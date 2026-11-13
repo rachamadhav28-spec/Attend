@@ -1297,6 +1297,87 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return uniqueMap.values.toList();
   }
 
+  static const _gptPrompt =
+      'Read this timetable image. Reply with one line per subject and nothing else, '
+      'exactly like this: Name | Mon 10:00 AM-11:00 AM, Tue 12:00 PM-01:00 PM. '
+      'Merge repeated cells of the same subject. If a subject spans several hours '
+      '(like 2:00 PM-5:00 PM) write the full range. Use 12-hour times with AM/PM. '
+      'Skip breaks and lunch. Use the full subject names from the subject list if the image has one.';
+
+  void _showPasteTimetableSheet() {
+    final ctrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: const Text('Paste your timetable'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '1. Copy the prompt and send it to ChatGPT together with your timetable photo.\n'
+              '2. Copy ChatGPT\'s reply and paste it below.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(const ClipboardData(text: _gptPrompt));
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Prompt copied')));
+              },
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('Copy prompt for ChatGPT'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              minLines: 5,
+              maxLines: 9,
+              decoration: const InputDecoration(
+                hintText: 'Maths-I | Mon 11:00 AM-12:00 PM, Tue 12:00 PM-01:00 PM',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () async {
+                final d = await Clipboard.getData('text/plain');
+                if (d?.text != null) ctrl.text = d!.text!;
+              },
+              child: const Text('Paste')),
+          FilledButton(
+            onPressed: () {
+              final list = parseTimetableText(ctrl.text, kTimeSlots.toSet());
+              if (list.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text(
+                        "Couldn't find any subjects. Each line should look like: Name | Mon 10:00 AM-11:00 AM")));
+                return;
+              }
+              Navigator.pop(ctx);
+              _showEditScannedTimetableDialog(_deduplicateSubjects([
+                for (final e in list)
+                  SubjectModel(
+                      name: e.name,
+                      scheduleSlot: e.slot,
+                      days: e.days,
+                      daySlots: e.daySlots)
+              ]));
+            },
+            child: const Text('Fill subjects'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _pickAndReadTimetablePdf() async {
     try {
       final res = await FilePicker.platform.pickFiles(
@@ -3543,7 +3624,18 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       icon: const Icon(Icons.upload_file_rounded),
                       label: Text(_isReadingTimetable
                           ? 'Reading file...'
-                          : 'Upload PDF or image'),
+                          : 'Upload photo'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: PressScale(
+                    child: OutlinedButton.icon(
+                      onPressed: _showPasteTimetableSheet,
+                      icon: const Icon(Icons.content_paste_rounded),
+                      label: const Text('Paste text from ChatGPT'),
                     ),
                   ),
                 ),
