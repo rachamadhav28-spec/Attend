@@ -599,7 +599,9 @@ class _BoldPageState extends State<BoldPage> {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: Container(
+      child: Stack(children: [
+        Positioned.fill(
+          child: Container(
         color: AppColors.primary,
         child: NotificationListener<ScrollNotification>(
           onNotification: _onScroll,
@@ -633,6 +635,16 @@ class _BoldPageState extends State<BoldPage> {
           ),
         ),
       ),
+        ),
+        // Keeps the clock area green while the page scrolls underneath.
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: MediaQuery.of(context).padding.top,
+          child: ColoredBox(color: AppColors.primary),
+        ),
+      ]),
     );
   }
 }

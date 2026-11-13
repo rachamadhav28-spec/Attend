@@ -2397,7 +2397,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               child: Center(
                 child: Text(
                   _subjects.isEmpty
-                      ? 'No subjects yet. Tap Add subject, or import a timetable from the Profile tab.'
+                      ? 'Nothing here yet. Add a subject, or import your timetable from Profile.'
                       : 'No classes on this day.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: AppColors.muted),
@@ -2700,7 +2700,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               Expanded(
                 child: logs.isEmpty
                     ? Center(
-                        child: Text('No attendance recorded yet.',
+                        child: Text('Nothing marked yet. Tap Present or Absent on Home.',
                             style: TextStyle(
                                 color: AppColors.muted, fontSize: 15)),
                       )
@@ -2995,7 +2995,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       if (mine.isEmpty)
         Padding(
           padding: EdgeInsets.only(bottom: 8),
-          child: Text('Days you mark yourself show up here.',
+          child: Text('Your own holidays show up here. Add one with +.',
               style: TextStyle(color: AppColors.muted, fontSize: 13)),
         ),
       for (final k in mine)
@@ -3328,7 +3328,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             child: SoftCard(
               child: Center(
                 child: Text(
-                  'No classes logged for this date yet.',
+                  'Nothing logged for this day.',
                   style: TextStyle(fontSize: 13, color: AppColors.muted),
                 ),
               ),
