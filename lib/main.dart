@@ -50,7 +50,7 @@ class AttendTrackApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AttendTrack',
+      title: 'Attend',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: const AppEntry(),
@@ -790,7 +790,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
             const AttendanceAppLogo(size: 72),
             const SizedBox(height: 12),
             const Text(
-              'AttendTrack',
+              'Attend',
               style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

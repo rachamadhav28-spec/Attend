@@ -90,7 +90,7 @@ import android.widget.RemoteViews
 class AttendRingWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
         val p = context.getSharedPreferences("attend_widget", Context.MODE_PRIVATE)
-        render(context, mgr, ids, p.getInt("pct", 0), p.getString("status", "Open AttendTrack") ?: "")
+        render(context, mgr, ids, p.getInt("pct", 0), p.getString("status", "Open Attend") ?: "")
     }
 
     companion object {

@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
                   opacity: name.value.clamp(0.0, 1.0),
                   child: Transform.translate(
                     offset: Offset(0, 12 * (1 - name.value)),
-                    child: const Text('AttendTrack',
+                    child: const Text('Attend',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 28,

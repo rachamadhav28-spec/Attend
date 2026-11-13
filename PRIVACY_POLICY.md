@@ -1,8 +1,8 @@
-# AttendTrack Privacy Policy
+# Attend Privacy Policy
 
 Last updated: 9 November 2026
 
-AttendTrack helps students track class attendance. This policy explains what the app stores and why.
+Attend helps students track class attendance. This policy explains what the app stores and why.
 
 ## What the app stores
 - **On your phone:** your name, course, year, state, subjects, class times, attendance records, holidays you add, and your settings.

@@ -1,4 +1,4 @@
-name: Build AttendTrack APK & AAB
+name: Build Attend APK & AAB
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
                    '    <application')
           if 'android.permission.CAMERA' not in t:
               t = t.replace('<application', perms, 1)
-          t = re.sub(r'android:label="[^"]*"', 'android:label="AttendTrack"', t, count=1)
+          t = re.sub(r'android:label="[^"]*"', 'android:label="Attend"', t, count=1)
           deep_link = ('<intent-filter>\n'
                        '    <action android:name="android.intent.action.VIEW" />\n'
                        '    <category android:name="android.intent.category.DEFAULT" />\n'
@@ -176,11 +176,11 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AttendTrack-Release-APK
+          name: Attend-Release-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AttendTrack-PlayStore-AAB
+          name: Attend-PlayStore-AAB
           path: build/app/outputs/bundle/release/app-release.aab
