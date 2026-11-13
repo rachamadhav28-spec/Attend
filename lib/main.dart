@@ -69,6 +69,25 @@ class AttendanceAppLogo extends StatelessWidget {
       child: CustomPaint(painter: LogoPainter(1, 1)));
 }
 
+/// How many one-hour classes a slot like "02:00 PM - 05:00 PM" holds (min 1).
+int slotHours(String slot) {
+  final r = RegExp(r'(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)',
+          caseSensitive: false)
+      .firstMatch(slot);
+  if (r == null) return 1;
+  int mins(String h, String mm, String ap) {
+    var hh = int.parse(h) % 12;
+    if (ap.toUpperCase() == 'PM') hh += 12;
+    return hh * 60 + int.parse(mm);
+  }
+  final s = mins(r[1]!, r[2]!, r[3]!);
+  final e = mins(r[4]!, r[5]!, r[6]!);
+  final d = e - s;
+  if (d <= 0) return 1;
+  final h = (d / 60).round();
+  return h < 1 ? 1 : h;
+}
+
 const kTimeSlots = [
   // Single-hour slots
   '10:00 AM - 11:00 AM',
@@ -2181,7 +2200,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   }
 
   void _mark(int i, bool present) {
-    final ok = _logAttendance(i, 1, present);
+    final day = DateFormat('E').format(_selectedCalendarDate);
+    final ok = _logAttendance(i, slotHours(_subjects[i].slotFor(day)), present);
     if (!ok) return;
     setState(() {
       _flashIdx = i;
