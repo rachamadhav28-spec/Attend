@@ -12,7 +12,7 @@ import 'package:qr/qr.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:pdfx/pdfx.dart';
+import 'timetable_reader.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ui_kit.dart';
@@ -1297,107 +1297,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     return uniqueMap.values.toList();
   }
 
-  Future<List<SubjectModel>> _aiReadTimetable(String path) async {
-    if (CloudBackupService.user == null) {
-      throw Exception('Sign in with Google first. The reader needs your account.');
-    }
-    final images = <String>[];
-    try {
-      if (path.toLowerCase().endsWith('.pdf')) {
-        final doc = await PdfDocument.openFile(path);
-        final n = doc.pagesCount > 3 ? 3 : doc.pagesCount;
-        for (var i = 1; i <= n; i++) {
-          final page = await doc.getPage(i);
-          final w = 1280.0;
-          final img = await page.render(
-              width: w,
-              height: w * page.height / page.width,
-              format: PdfPageImageFormat.png,
-              backgroundColor: '#FFFFFF');
-          await page.close();
-          if (img != null) images.add(base64Encode(img.bytes));
-        }
-        await doc.close();
-      } else {
-        final bytes = await File(path).readAsBytes();
-        final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1280);
-        final img = (await codec.getNextFrame()).image;
-        final png = await img.toByteData(format: ui.ImageByteFormat.png);
-        images.add(base64Encode(png!.buffer.asUint8List()));
-      }
-    } catch (_) {
-      throw Exception("Couldn't open that file. Try another one.");
-    }
-    if (images.isEmpty) {
-      throw Exception("Couldn't open that file. Try another one.");
-    }
-    final dynamic data;
-    try {
-      final res = await Supabase.instance.client.functions
-          .invoke('read-timetable', body: {'images': images})
-          .timeout(const Duration(seconds: 70));
-      data = res.data;
-    } on FunctionException catch (e) {
-      final d = e.details;
-      final code = d is Map ? d['error'] : null;
-      if (code == 'limit') {
-        throw Exception("You've used today's 10 reads. Try again tomorrow, or add subjects by hand.");
-      }
-      if (code == 'busy') {
-        throw Exception('The reader is busy right now. Try again in a few minutes.');
-      }
-      if (code == 'not_configured') {
-        throw Exception('The reader is not switched on yet.');
-      }
-      throw Exception(
-          "The reader couldn't read that (error ${e.status}${code != null ? ', $code' : ''}). Try again in a minute.");
-    } catch (e) {
-      final t = e.toString();
-      throw Exception(
-          'Check your internet and try again. (${t.length > 90 ? t.substring(0, 90) : t})');
-    }
-    final list = (data is Map ? data['subjects'] : null) as List? ?? [];
-    final out = <SubjectModel>[];
-    for (final raw in list) {
-      if (raw is! Map) continue;
-      final name = (raw['name'] ?? '').toString().trim();
-      if (name.length < 2) continue;
-      final code = (raw['code'] ?? '').toString().trim();
-      final days = <String>[
-        for (final d in (raw['days'] as List? ?? []))
-          if (const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].contains(d.toString())) d.toString()
-      ];
-      final ds = <String, String>{};
-      final slots = raw['slots'];
-      if (slots is Map) {
-        for (final e in slots.entries) {
-          final mm = RegExp(
-                  r'(\d{1,2}):(\d{2})\s*(AM|PM)\s*(?:-|–|to)\s*(\d{1,2}):(\d{2})\s*(AM|PM)')
-              .firstMatch(e.value.toString().toUpperCase());
-          if (mm == null) continue;
-          String p2(String s) => s.padLeft(2, '0');
-          final v =
-              '${p2(mm[1]!)}:${mm[2]} ${mm[3]} - ${p2(mm[4]!)}:${mm[5]} ${mm[6]}';
-          if (kTimeSlots.contains(v) && days.contains(e.key.toString())) {
-            ds[e.key.toString()] = v;
-          }
-        }
-      }
-      out.add(SubjectModel(
-        name: code.isEmpty ? name : '$name ($code)',
-        scheduleSlot: ds.isNotEmpty ? ds.values.first : kTimeSlots.first,
-        days: days,
-        daySlots: ds,
-      ));
-    }
-    return out;
-  }
-
   Future<void> _pickAndReadTimetablePdf() async {
     try {
       final res = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['png', 'jpg', 'jpeg', 'pdf'],
+        allowedExtensions: ['png', 'jpg', 'jpeg'],
       );
       if (res == null || res.files.isEmpty) return;
 
@@ -1411,14 +1315,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       final path = picked.path;
       if (path != null) {
         try {
-          extracted = await _aiReadTimetable(path);
-        } catch (err) {
-          setState(() => _isReadingTimetable = false);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(err.toString().replaceFirst('Exception: ', '')),
-              duration: const Duration(seconds: 6)));
-          return;
+          final grid = await readTimetable(path, kTimeSlots.toSet());
+          extracted = [
+            for (final e in grid)
+              SubjectModel(
+                  name: e.name,
+                  scheduleSlot: e.slot,
+                  days: e.days,
+                  daySlots: e.daySlots)
+          ];
+        } catch (e) {
+          debugPrint('Timetable reader error: $e');
         }
       }
 
@@ -1427,7 +1334,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text(
-                "Couldn't read subjects from that file. Use a clear photo or screenshot, or add subjects by hand."),
+                "Couldn't read that timetable. Use a clear, straight photo with the days down the side and times across the top, or add subjects by hand."),
             duration: Duration(seconds: 6)));
         return;
       }
