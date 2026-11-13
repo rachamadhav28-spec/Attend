@@ -1334,7 +1334,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     final dynamic data;
     try {
       final res = await Supabase.instance.client.functions
-          .invoke('read-timetable', body: {'images': images});
+          .invoke('read-timetable', body: {'images': images})
+          .timeout(const Duration(seconds: 70));
       data = res.data;
     } on FunctionException catch (e) {
       final d = e.details;
@@ -1348,9 +1349,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       if (code == 'not_configured') {
         throw Exception('The reader is not switched on yet.');
       }
-      throw Exception("The reader couldn't read that. Check your internet and try again.");
-    } catch (_) {
-      throw Exception('Check your internet and try again.');
+      throw Exception(
+          "The reader couldn't read that (error ${e.status}${code != null ? ', $code' : ''}). Try again in a minute.");
+    } catch (e) {
+      final t = e.toString();
+      throw Exception(
+          'Check your internet and try again. (${t.length > 90 ? t.substring(0, 90) : t})');
     }
     final list = (data is Map ? data['subjects'] : null) as List? ?? [];
     final out = <SubjectModel>[];
