@@ -1315,7 +1315,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       final path = picked.path;
       if (path != null) {
         try {
-          final grid = await readTimetable(path, kTimeSlots.toSet());
+          var grid = await readTimetable(
+              await prepareForOcr(path), kTimeSlots.toSet());
+          if (grid.isEmpty) {
+            grid = await readTimetable(path, kTimeSlots.toSet());
+          }
           extracted = [
             for (final e in grid)
               SubjectModel(

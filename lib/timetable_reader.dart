@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
@@ -187,5 +188,77 @@ Future<List<TtEntry>> readTimetable(String path, Set<String> allowed) async {
     ];
   } finally {
     rec.close();
+  }
+}
+
+
+/// Phone screenshots of a photographed timetable often have big black bars and
+/// tiny text. Crop the bright part and enlarge it so the text reader can see it.
+/// Returns the original path if anything goes wrong.
+Future<String> prepareForOcr(String path) async {
+  try {
+    final bytes = await File(path).readAsBytes();
+    final codec = await instantiateImageCodec(bytes);
+    final img = (await codec.getNextFrame()).image;
+    final w = img.width, h = img.height;
+    final data = await img.toByteData(format: ImageByteFormat.rawRgba);
+    if (data == null) return path;
+    double lum(int x, int y) {
+      final i = (y * w + x) * 4;
+      return 0.3 * data.getUint8(i) +
+          0.59 * data.getUint8(i + 1) +
+          0.11 * data.getUint8(i + 2);
+    }
+
+    // Rows whose average brightness says "paper", not "black bar".
+    int top = -1, bottom = -1;
+    for (var y = 0; y < h; y++) {
+      var sum = 0.0, n = 0;
+      for (var x = 0; x < w; x += 6) {
+        sum += lum(x, y);
+        n++;
+      }
+      if (sum / n > 70) {
+        if (top < 0) top = y;
+        bottom = y;
+      }
+    }
+    if (top < 0 || bottom - top < h * 0.15) return path;
+    int left = -1, right = -1;
+    for (var x = 0; x < w; x++) {
+      var sum = 0.0, n = 0;
+      for (var y = top; y <= bottom; y += 6) {
+        sum += lum(x, y);
+        n++;
+      }
+      if (sum / n > 70) {
+        if (left < 0) left = x;
+        right = x;
+      }
+    }
+    if (left < 0) {
+      left = 0;
+      right = w - 1;
+    }
+    final cw = (right - left + 1).toDouble();
+    final ch = (bottom - top + 1).toDouble();
+    final scale = (2400 / math.max(cw, ch)).clamp(1.0, 3.0);
+    final dw = (cw * scale).round(), dh = (ch * scale).round();
+    final rec = PictureRecorder();
+    final canvas = Canvas(rec);
+    canvas.drawImageRect(
+      img,
+      Rect.fromLTWH(left.toDouble(), top.toDouble(), cw, ch),
+      Rect.fromLTWH(0, 0, dw.toDouble(), dh.toDouble()),
+      Paint()..filterQuality = FilterQuality.high,
+    );
+    final out = await rec.endRecording().toImage(dw, dh);
+    final png = await out.toByteData(format: ImageByteFormat.png);
+    if (png == null) return path;
+    final f = File('${Directory.systemTemp.path}/tt_ocr.png');
+    await f.writeAsBytes(png.buffer.asUint8List());
+    return f.path;
+  } catch (_) {
+    return path;
   }
 }
