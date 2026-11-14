@@ -1113,7 +1113,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       _userEmail = prefs.getString('user_email') ?? 'student@gmail.com';
       _course = prefs.getString('course') ?? 'B.Tech';
       _year = prefs.getString('year') ?? '2nd Year';
-      _stateName = prefs.getString('state') ?? '';
+      _stateName = 'Telangana';
       _timetableFile =
           prefs.getString('timetable_file') ?? 'No PDF uploaded yet';
       _lastBackup = prefs.getString('last_cloud_backup') ?? 'Just now';
@@ -2849,8 +2849,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                   fontSize: 20,
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          Text(_stateName.isEmpty ? 'No state selected' : _stateName,
-              style: const TextStyle(color: Colors.white, fontSize: 13)),
+          const SizedBox.shrink(),
         ],
       ),
       children: children,
