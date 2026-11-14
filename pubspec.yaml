@@ -15,7 +15,6 @@ dependencies:
   qr: ^3.0.1
   mobile_scanner: ^7.0.0
   file_picker: ^8.1.2
-  google_mlkit_text_recognition: ^0.15.0
   supabase_flutter: ^2.8.0
   google_sign_in: ^6.2.1
 
