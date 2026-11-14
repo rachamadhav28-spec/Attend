@@ -838,8 +838,11 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primary,
                         ),
-                        onPressed:
-                            _isRestoring ? null : _handleRestoreFromCloud,
+                        onPressed: _isRestoring
+                            ? null
+                            : (kIsWeb
+                                ? _webSignInNotice
+                                : _handleRestoreFromCloud),
                         icon: _isRestoring
                             ? const SizedBox(
                                 width: 18,
@@ -1913,6 +1916,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }
     await CloudBackupService.signOut();
     if (mounted) setState(() {});
+  }
+
+  void _webSignInNotice() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+            'Google sign-in works in the Android app. On the web, your data is saved in this browser.')));
   }
 
   Future<void> _signInForBackup() async {
@@ -3581,7 +3590,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     width: double.infinity,
                     child: PressScale(
                       child: FilledButton.icon(
-                        onPressed: _signInForBackup,
+                        onPressed: kIsWeb ? _webSignInNotice : _signInForBackup,
                         icon: const Icon(Icons.login_rounded),
                         label: const Text('Sign in with Google'),
                       ),
