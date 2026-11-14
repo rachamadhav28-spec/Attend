@@ -68,6 +68,29 @@ h2{font-size:30px;margin-bottom:8px;color:var(--g)}
 .btn{position:relative;overflow:hidden}
 .btn:not(.o)::after{content:"";position:absolute;top:0;left:0;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.7),transparent);animation:shine 3.6s ease-in-out infinite}
 .rail .phone{transition:transform .2s ease-out}
+
+/* frame B: cream card, bold edge */
+.phone{background:var(--c);padding:10px;border:5px solid var(--gd);border-radius:32px;box-shadow:10px 10px 0 var(--gd);overflow:hidden}
+.phone::before,.phone::after,.phone i{display:none}
+.phone img{border-radius:20px}
+.hero .phone{box-shadow:10px 10px 0 rgba(0,0,0,.35);border-color:var(--gd)}
+nav{position:sticky;top:0;z-index:20;background:rgba(53,94,59,.92);backdrop-filter:blur(8px)}
+.calc{background:var(--w);border-radius:28px;padding:26px;max-width:680px;margin:0 auto;box-shadow:8px 8px 0 var(--gd);border:3px solid var(--gd)}
+.calc .row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.calc label{display:block;font-size:13px;font-weight:700;color:var(--g);margin-bottom:4px}
+.calc input,.calc select{width:100%;font:inherit;font-size:18px;padding:12px;border-radius:14px;border:2px solid var(--c2);background:var(--c);color:var(--gd)}
+.calc input:focus,.calc select:focus{outline:3px solid var(--g);border-color:var(--g)}
+.res{margin-top:18px;border-radius:20px;padding:18px;background:var(--g);color:#fff;transition:background .3s}
+.res.low{background:#8a2a22}
+.res b{font-size:36px;display:block;line-height:1.1}
+.res span{opacity:.92}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;counter-reset:s}
+.steps .card{position:relative;padding-top:54px}
+.steps .card::before{counter-increment:s;content:counter(s);position:absolute;top:14px;left:20px;width:30px;height:30px;border-radius:50%;background:var(--g);color:#fff;font-weight:700;display:grid;place-items:center}
+details{background:var(--w);border-radius:18px;padding:16px 20px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:700;color:var(--g)}
+details p{margin-top:8px;color:#4b5b4e}
+@media(max-width:560px){.calc .row{grid-template-columns:1fr}}
 .ad-slot{display:none}
 .rail{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 20px 20px;-webkit-overflow-scrolling:touch}
 .rail figure{flex:0 0 auto;width:min(260px,70vw);scroll-snap-align:center;text-align:center}
@@ -94,9 +117,25 @@ footer a{color:#fff;margin-right:16px}
 </div></div></section>
 <section id="screens"><div class="wrap"><h2>See every screen</h2><p class="sub">Home, History, Holidays, QR and Profile. Swipe to look.</p></div>
 <div class="rail"><figure><div class="phone"><i></i><i></i><img src="img/home1.jpg" alt="Home screen"></div><figcaption>Home</figcaption></figure><figure><div class="phone"><i></i><i></i><img src="img/history.jpg" alt="History screen"></div><figcaption>History</figcaption></figure><figure><div class="phone"><i></i><i></i><img src="img/holidays.jpg" alt="Holidays screen"></div><figcaption>Holidays</figcaption></figure><figure><div class="phone"><i></i><i></i><img src="img/qr.jpg" alt="QR share screen"></div><figcaption>QR share</figcaption></figure><figure><div class="phone"><i></i><i></i><img src="img/profile.jpg" alt="Profile screen"></div><figcaption>Profile</figcaption></figure></div></section>
+<section id="calculator"><div class="wrap"><h2>Attendance and bunk calculator</h2><p class="sub">Type your numbers. See your percentage and how many classes you can skip.</p>
+<div class="calc"><div class="row">
+<div><label for="att">Classes attended</label><input id="att" type="number" inputmode="numeric" min="0" value="30"></div>
+<div><label for="tot">Total classes held</label><input id="tot" type="number" inputmode="numeric" min="1" value="36"></div>
+<div><label for="tar">Required %</label><select id="tar"><option>65</option><option selected>75</option><option>80</option><option>85</option></select></div></div>
+<div class="res" id="res" aria-live="polite"><b id="pct">83%</b><span id="msg">You can skip 4 more classes.</span></div></div></div></section>
+<section id="steps"><div class="wrap"><h2>Start in three taps</h2><p class="sub">No setup headache.</p>
+<div class="steps"><div class="card"><h3>Add your subjects</h3><p>Paste your timetable from ChatGPT, or add subjects by hand.</p></div>
+<div class="card"><h3>Tap Present or Absent</h3><p>One tap on each subject card for the day.</p></div>
+<div class="card"><h3>Watch the bunk meter</h3><p>See your percentage and how many classes are safe to skip.</p></div></div></div></section>
 <section id="how"><div class="wrap"><h2>How the 75% rule works</h2>
 <p class="sub" style="max-width:640px">Attendance percentage is classes attended divided by total classes. Most colleges need at least 75%. Attend Track counts every hour of a class, then works out how many more you can miss: attended ÷ 0.75 − total, rounded down. When it says "Safe to skip 2 classes", missing two keeps you at or above 75%.</p>
 <a class="btn" style="background:var(--g);color:#fff" href="app/">Try it now</a></div></section>
+<section id="faq"><div class="wrap"><h2>Questions</h2><p class="sub">Quick answers about attendance and AttendTrack.</p>
+<details><summary>How do I calculate attendance percentage?</summary><p>Divide classes attended by total classes held, then multiply by 100. For example, 30 attended out of 36 is 83%.</p></details>
+<details><summary>How many classes can I skip and stay at 75%?</summary><p>Use attended ÷ 0.75 − total, rounded down. With 30 attended out of 36, you can skip 4 more classes. The calculator above does it for you.</p></details>
+<details><summary>Is AttendTrack free?</summary><p>Yes. The web app and the Android app are free to use.</p></details>
+<details><summary>Where is my data saved?</summary><p>On the web it is saved in your browser. In the Android app you can also back it up with Google sign-in.</p></details>
+</div></section>
 <div class="ad-slot" id="ad-bottom"></div>
 <footer><div class="wrap"><a href="privacy.html">Privacy policy</a><a href="mailto:rachamadhav28@gmail.com">Contact</a> © AttendTrack</div></footer>
 <script>
@@ -118,5 +157,15 @@ p.addEventListener('touchmove',function(e){var t=e.touches[0];mv(t.clientX,t.cli
 ['mouseleave','touchend'].forEach(function(ev){p.addEventListener(ev,function(){p.style.transform=''})});
 });
 })();
+</script>
+<script>
+(function(){var a=document.getElementById('att'),b=document.getElementById('tot'),c=document.getElementById('tar');
+if(!a)return;var r=document.getElementById('res'),p=document.getElementById('pct'),m=document.getElementById('msg');
+function go(){var x=+a.value,y=+b.value,z=+c.value;
+if(!(y>0)||x<0||x>y){p.textContent='--';m.textContent='Attended must be between 0 and total.';r.className='res low';return}
+var pc=x/y*100;p.textContent=(Math.round(pc*10)/10)+'%';
+if(pc>=z){var s=Math.floor(x/(z/100)-y+1e-9);r.className='res';m.textContent=s>0?'You can skip '+s+' more class'+(s>1?'es':'')+' and stay at '+z+'%.':'You are at the limit. Do not skip the next class.'}
+else{var n=Math.ceil((z*y-100*x)/(100-z)-1e-9);r.className='res low';m.textContent='Below '+z+'%. Attend the next '+n+' class'+(n>1?'es':'')+' in a row to get back.'}}
+[a,b,c].forEach(function(e){e.addEventListener('input',go)});go()})();
 </script>
 </body></html>
