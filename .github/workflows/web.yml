@@ -1,0 +1,50 @@
+name: Build website
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      - name: Build the web app
+        run: |
+          flutter create --platforms web --org com.madhav --project-name attendtrack .
+          flutter build web --release --base-href /app/
+      - name: Put the site together
+        run: |
+          mkdir _site
+          cp -r site/* _site/
+          mkdir _site/app
+          cp -r build/web/* _site/app/
+          python3 tools/make_privacy.py
+          printf 'User-agent: *\nAllow: /\nSitemap: https://attendtrack.online/sitemap.xml\n' > _site/robots.txt
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://attendtrack.online/</loc></url><url><loc>https://attendtrack.online/privacy.html</loc></url></urlset>\n' > _site/sitemap.xml
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
