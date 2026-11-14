@@ -34,6 +34,18 @@ h2{font-size:30px;margin-bottom:8px;color:var(--g)}
 .card p{color:#4b5b4e;font-size:15px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
 .stat{display:inline-block;background:var(--c2);border-radius:14px;padding:10px 16px;margin:6px 6px 0 0;font-weight:700}
+
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+@keyframes pop{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
+.hero .phone{animation:floaty 5s ease-in-out infinite}
+.hero h1,.hero p,.hero .btn{animation:pop .7s both}.hero p{animation-delay:.12s}.hero .btn{animation-delay:.24s}
+.js .rv{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
+.js .rv.in{opacity:1;transform:none}
+.card{transition:transform .25s,box-shadow .25s}.card:hover{transform:translateY(-6px);box-shadow:0 14px 28px rgba(27,47,32,.14)}
+.btn{transition:transform .2s,box-shadow .2s}.btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.2)}
+.rail figure{transition:transform .35s}.rail figure:hover{transform:scale(1.04) rotate(-1deg)}
+.rail figure{width:min(300px,78vw)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.js .rv{opacity:1;transform:none}}
 .ad-slot{display:none}
 .rail{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 20px 20px;-webkit-overflow-scrolling:touch}
 .rail figure{flex:0 0 auto;width:min(260px,70vw);scroll-snap-align:center;text-align:center}
@@ -65,4 +77,14 @@ footer a{color:#fff;margin-right:16px}
 <a class="btn" style="background:var(--g);color:#fff" href="app/">Try it now</a></div></section>
 <div class="ad-slot" id="ad-bottom"></div>
 <footer><div class="wrap"><a href="privacy.html">Privacy policy</a><a href="mailto:rachamadhav28@gmail.com">Contact</a> © AttendTrack</div></footer>
+<script>
+document.documentElement.classList.add('js');
+(function(){var els=document.querySelectorAll('.card,.rail figure,section h2,.sub');
+els.forEach(function(e){e.classList.add('rv')});
+if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return}
+var o=new IntersectionObserver(function(a){a.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');o.unobserve(x.target)}})},{threshold:.15});
+els.forEach(function(e,i){e.style.transitionDelay=((i%3)*80)+'ms';o.observe(e)});
+setTimeout(function(){els.forEach(function(e){e.classList.add('in')})},4000);
+})();
+</script>
 </body></html>
