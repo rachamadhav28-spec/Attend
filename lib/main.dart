@@ -15,6 +15,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ui_kit.dart';
+import 'timetable_reader.dart';
 
 // ============================================================================
 // PASTE YOUR SUPABASE KEYS HERE (or share them with me and I will fill them in)
@@ -1293,6 +1294,271 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       }
     }
     return uniqueMap.values.toList();
+  }
+
+  static const _gptPrompt =
+      'Read this timetable image. Reply with one line per subject and nothing else, '
+      'exactly like this: Name | Mon 10:00 AM-11:00 AM, Tue 12:00 PM-01:00 PM. '
+      'Merge repeated cells of the same subject. If a subject spans several hours '
+      '(like 2:00 PM-5:00 PM) write the full range. Use 12-hour times with AM/PM. '
+      'Skip breaks and lunch. Use the full subject names from the subject list if the image has one.';
+
+  void _showPasteTimetableSheet() {
+    final ctrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => SheetDialog(
+        title: const Text('Paste your timetable'),
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '1. Copy the prompt and send it to ChatGPT together with your timetable photo.\n'
+              '2. Copy ChatGPT\'s reply and paste it below.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(const ClipboardData(text: _gptPrompt));
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Prompt copied')));
+              },
+              icon: const Icon(Icons.copy_rounded),
+              label: const Text('Copy prompt for ChatGPT'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              minLines: 5,
+              maxLines: 9,
+              decoration: const InputDecoration(
+                hintText: 'Maths-I | Mon 11:00 AM-12:00 PM, Tue 12:00 PM-01:00 PM',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () async {
+                final d = await Clipboard.getData('text/plain');
+                if (d?.text != null) ctrl.text = d!.text!;
+              },
+              child: const Text('Paste')),
+          FilledButton(
+            onPressed: () {
+              final list = parseTimetableText(ctrl.text, kTimeSlots.toSet());
+              if (list.isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                    content: Text(
+                        "Couldn't find any subjects. Each line should look like: Name | Mon 10:00 AM-11:00 AM")));
+                return;
+              }
+              Navigator.pop(ctx);
+              _showEditScannedTimetableDialog(_deduplicateSubjects([
+                for (final e in list)
+                  SubjectModel(
+                      name: e.name,
+                      scheduleSlot: e.slot,
+                      days: e.days,
+                      daySlots: e.daySlots)
+              ]));
+            },
+            child: const Text('Fill subjects'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditScannedTimetableDialog(List<SubjectModel> draftList) {
+    final List<TextEditingController> ctrls =
+        draftList.map((s) => TextEditingController(text: s.name)).toList();
+    final List<String> slotList = draftList.map((s) {
+      return kTimeSlots.contains(s.scheduleSlot)
+          ? s.scheduleSlot
+          : kTimeSlots.first;
+    }).toList();
+    final List<List<String>> daysList =
+        draftList.map((s) => List<String>.from(s.days)).toList();
+    final List<Map<String, String>> dsList =
+        draftList.map((s) => Map<String, String>.from(s.daySlots)).toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: false,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => SheetDialog(
+          title: const Text(
+            'Check your timetable',
+            
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Fix any name and tap the days each class happens, then save.',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                  const SizedBox(height: 12),
+                  ...List.generate(ctrls.length, (idx) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.bg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.line),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: ctrls[idx],
+                                  decoration: InputDecoration(
+                                    labelText: 'Subject ${idx + 1} Name',
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    ctrls.removeAt(idx);
+                                    slotList.removeAt(idx);
+                                    dsList.removeAt(idx);
+                                    daysList.removeAt(idx);
+                                  });
+                                },
+                                icon: Icon(Icons.delete_outline,
+                                    color: AppColors.bad),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: kTimeSlots.map((slot) {
+                              final sel = slotList[idx] == slot;
+                              return GestureDetector(
+                                onTap: () => setDialogState(
+                                    () => slotList[idx] = slot),
+                                child: AnimatedContainer(
+                                  duration: kFast,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: sel
+                                        ? AppColors.primary
+                                        : AppColors.tint,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: Text(slot,
+                                      style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                          color: sel
+                                              ? Colors.white
+                                              : AppColors.primary)),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 4,
+                            children: _weekDays.map((d) {
+                              final has = daysList[idx].contains(d);
+                              return FilterChip(
+                                label: Text(d,
+                                    style: const TextStyle(fontSize: 10)),
+                                selected: has,
+                                onSelected: (val) {
+                                  setDialogState(() {
+                                    if (val) {
+                                      daysList[idx].add(d);
+                                    } else {
+                                      daysList[idx].remove(d);
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  TextButton.icon(
+                    onPressed: () {
+                      setDialogState(() {
+                        ctrls.add(TextEditingController(text: 'New Subject'));
+                        slotList.add(kTimeSlots.first);
+                        dsList.add({});
+                        daysList.add(['Mon', 'Wed', 'Fri']);
+                      });
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Another Subject'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final List<SubjectModel> finalSubs = [];
+                for (int i = 0; i < ctrls.length; i++) {
+                  final text = ctrls[i].text.trim();
+                  if (text.isNotEmpty) {
+                    finalSubs.add(
+                      SubjectModel(
+                        name: text,
+                        scheduleSlot: slotList[i],
+                        daySlots: dsList[i],
+                        days: daysList[i].isEmpty
+                            ? ['Mon', 'Wed', 'Fri']
+                            : daysList[i],
+                      ),
+                    );
+                  }
+                }
+                if (finalSubs.isNotEmpty) {
+                  setState(() => _subjects = _deduplicateSubjects(finalSubs));
+                  _saveAllData(showSnack: true);
+                }
+                Navigator.pop(ctx);
+                setState(() => _currentTab = 0);
+              },
+              child: const Text('Save Timetable'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showEditSingleSubjectDialog(int subIndex) {
@@ -3248,6 +3514,32 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _profileRow('Year', _year),
                 const SizedBox(height: 8),
                 _profileRow('State', _stateName.isEmpty ? 'Not set' : _stateName),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        FadeSlideIn(
+          child: SoftCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Timetable',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('${_subjects.length} subjects added',
+                    style: TextStyle(fontSize: 13, color: AppColors.muted)),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: PressScale(
+                    child: OutlinedButton.icon(
+                      onPressed: _showPasteTimetableSheet,
+                      icon: const Icon(Icons.content_paste_rounded),
+                      label: const Text('Paste text from ChatGPT'),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
