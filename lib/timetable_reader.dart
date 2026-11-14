@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
@@ -26,12 +28,85 @@ String _fmt(int h, String m) {
   return '${h12.toString().padLeft(2, '0')}:$m ${pm ? 'PM' : 'AM'}';
 }
 
+/// Crops dark borders and enlarges small pictures so the text reader can see
+/// the letters. Returns the original path if anything goes wrong.
+Future<String> _prepare(String path) async {
+  try {
+    final bytes = await File(path).readAsBytes();
+    var codec = await instantiateImageCodec(bytes);
+    var img = (await codec.getNextFrame()).image;
+    if (img.width > 3000) {
+      codec = await instantiateImageCodec(bytes, targetWidth: 3000);
+      img = (await codec.getNextFrame()).image;
+    }
+    final w = img.width, h = img.height;
+    final ByteData data = (await img.toByteData(format: ImageByteFormat.rawRgba))!;
+    bool bright(int x, int y) {
+      final i = (y * w + x) * 4;
+      return (data.getUint8(i) * 3 + data.getUint8(i + 1) * 6 + data.getUint8(i + 2)) ~/ 10 > 40;
+    }
+
+    bool rowOk(int y) {
+      var c = 0, n = 0;
+      for (var x = 0; x < w; x += 4) {
+        n++;
+        if (bright(x, y)) c++;
+      }
+      return c / n > 0.3;
+    }
+
+    var top = 0, bottom = h - 1;
+    while (top < h - 1 && !rowOk(top)) {
+      top++;
+    }
+    while (bottom > top && !rowOk(bottom)) {
+      bottom--;
+    }
+    bool colOk(int x) {
+      var c = 0, n = 0;
+      for (var y = top; y <= bottom; y += 4) {
+        n++;
+        if (bright(x, y)) c++;
+      }
+      return c / n > 0.3;
+    }
+
+    var left = 0, right = w - 1;
+    while (left < w - 1 && !colOk(left)) {
+      left++;
+    }
+    while (right > left && !colOk(right)) {
+      right--;
+    }
+    var crop = Rect.fromLTRB(left.toDouble(), top.toDouble(), right + 1.0, bottom + 1.0);
+    if (crop.width < 200 || crop.height < 100) {
+      crop = Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble());
+    }
+    final scale = crop.width < 2400 ? (2400 / crop.width).clamp(1.0, 4.0) : 1.0;
+    final full = crop.width == w && crop.height == h;
+    if (scale == 1.0 && full) return path;
+    final ow = (crop.width * scale).round(), oh = (crop.height * scale).round();
+    final rec = PictureRecorder();
+    final canvas = Canvas(rec);
+    canvas.drawImageRect(img, crop, Rect.fromLTWH(0, 0, ow.toDouble(), oh.toDouble()),
+        Paint()..filterQuality = FilterQuality.high);
+    final out = await rec.endRecording().toImage(ow, oh);
+    final png = await out.toByteData(format: ImageByteFormat.png);
+    final f = File('${Directory.systemTemp.path}/tt_prep_${DateTime.now().millisecondsSinceEpoch}.png');
+    await f.writeAsBytes(png!.buffer.asUint8List());
+    return f.path;
+  } catch (_) {
+    return path;
+  }
+}
+
 /// Reads a grid timetable photo: days down the side, time ranges across the top.
 /// Returns [] if no grid is found (caller falls back to plain text lines).
 Future<List<TtEntry>> readTimetable(String path, Set<String> allowed) async {
   final rec = TextRecognizer();
+  final prepared = await _prepare(path);
   try {
-    final out = await rec.processImage(InputImage.fromFilePath(path));
+    final out = await rec.processImage(InputImage.fromFilePath(prepared));
     // 1) Split each OCR line into cell fragments at wide gaps.
     final frags = <_Frag>[];
     for (final b in out.blocks) {
@@ -188,6 +263,11 @@ Future<List<TtEntry>> readTimetable(String path, Set<String> allowed) async {
     ];
   } finally {
     rec.close();
+    if (prepared != path) {
+      try {
+        File(prepared).deleteSync();
+      } catch (_) {}
+    }
   }
 }
 
