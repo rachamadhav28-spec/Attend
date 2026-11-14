@@ -16,7 +16,7 @@
 body{font-family:Roboto,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--c);color:var(--gd);line-height:1.55}
 .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
 nav{background:var(--g);color:#fff}nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
-nav b{font-size:20px}nav a{color:#fff;text-decoration:none;margin-left:20px;font-size:15px}
+nav b{font-size:20px;white-space:nowrap}.pill{background:var(--c);color:var(--g)!important;font-weight:700;padding:8px 16px;border-radius:999px;white-space:nowrap}nav a{color:#fff;text-decoration:none;margin-left:20px;font-size:15px}
 .hero{background:var(--g);color:#fff;border-radius:0 0 40px 40px;padding:36px 0 64px}
 .hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center}
 h1{font-size:clamp(34px,6vw,56px);line-height:1.1;margin-bottom:14px}
@@ -35,11 +35,14 @@ h2{font-size:30px;margin-bottom:8px;color:var(--g)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center}
 .stat{display:inline-block;background:var(--c2);border-radius:14px;padding:10px 16px;margin:6px 6px 0 0;font-weight:700}
 .ad-slot{display:none}
+.rail{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x mandatory;padding:8px 20px 20px;-webkit-overflow-scrolling:touch}
+.rail figure{flex:0 0 auto;width:min(260px,70vw);scroll-snap-align:center;text-align:center}
+.rail .phone{width:100%}.rail figcaption{margin-top:10px;font-weight:700;color:var(--g)}
 footer{background:var(--g);color:#fff;padding:28px 0;margin-top:20px;font-size:14px}
 footer a{color:#fff;margin-right:16px}
-@media(max-width:760px){.hero .wrap,.two{grid-template-columns:1fr}.btn.o{margin-left:0;margin-top:12px}nav a{margin-left:12px;font-size:14px}}
+@media(max-width:760px){.hide-m{display:none}section{padding:36px 0}.hero{padding:24px 0 40px}.hero .wrap{gap:24px}.hero .wrap,.two{grid-template-columns:1fr}.btn.o{margin-left:0;margin-top:12px}nav a{margin-left:12px;font-size:14px}}
 </style></head><body>
-<nav><div class="wrap"><b>AttendTrack</b><div><a href="#features">Features</a><a href="#how">How it works</a><a href="app/">Open app</a></div></div></nav>
+<nav><div class="wrap"><b>AttendTrack</b><div><a class="hide-m" href="#features">Features</a><a class="hide-m" href="#screens">Screens</a><a class="hide-m" href="#how">How it works</a><a class="pill" href="app/">Open app</a></div></div></nav>
 <header class="hero"><div class="wrap">
 <div><h1>Stay above 75%.</h1><p>Track every class, see exactly how many you can skip, and keep your timetable in one place. Free for college students.</p>
 <a class="btn" href="app/">Open the app</a><a class="btn o" href="#how">How it works</a></div>
@@ -55,9 +58,8 @@ footer a{color:#fff;margin-right:16px}
 <div class="card"><h3>Holidays</h3><p>Holiday calendar and your own holidays, kept out of your attendance.</p></div>
 <div class="card"><h3>Cloud backup</h3><p>Sign in with Google to keep your data safe and switch accounts.</p></div>
 </div></div></section>
-<section><div class="wrap two"><div class="phone"><img src="img/home2.jpg" alt="Subject cards with Present and Absent buttons"></div>
-<div><h2>Your day, one screen</h2><p class="sub">Pick the day, tap Present or Absent, and watch your percentage and safe skips update.</p>
-<span class="stat">Attended</span><span class="stat">Missed</span><span class="stat">Safe to skip</span></div></div></section>
+<section id="screens"><div class="wrap"><h2>See every screen</h2><p class="sub">Home, History, Holidays, QR and Profile. Swipe to look.</p></div>
+<div class="rail"><figure><div class="phone"><img src="img/home1.jpg" alt="Home screen"></div><figcaption>Home</figcaption></figure><figure><div class="phone"><img src="img/history.jpg" alt="History screen"></div><figcaption>History</figcaption></figure><figure><div class="phone"><img src="img/holidays.jpg" alt="Holidays screen"></div><figcaption>Holidays</figcaption></figure><figure><div class="phone"><img src="img/qr.jpg" alt="QR share screen"></div><figcaption>QR share</figcaption></figure><figure><div class="phone"><img src="img/profile.jpg" alt="Profile screen"></div><figcaption>Profile</figcaption></figure></div></section>
 <section id="how"><div class="wrap"><h2>How the 75% rule works</h2>
 <p class="sub" style="max-width:640px">Attendance percentage is classes attended divided by total classes. Most colleges need at least 75%. Attend Track counts every hour of a class, then works out how many more you can miss: attended ÷ 0.75 − total, rounded down. When it says "Safe to skip 2 classes", missing two keeps you at or above 75%.</p>
 <a class="btn" style="background:var(--g);color:#fff" href="app/">Try it now</a></div></section>
