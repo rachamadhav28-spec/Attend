@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'splash.dart';
 import 'holidays.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -841,7 +842,7 @@ class _InitialStudentSetupScreenState extends State<InitialStudentSetupScreen> {
                         onPressed: _isRestoring
                             ? null
                             : (kIsWeb
-                                ? _webSignInNotice
+                                ? () => webSignInNotice(context)
                                 : _handleRestoreFromCloud),
                         icon: _isRestoring
                             ? const SizedBox(
@@ -1916,12 +1917,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     }
     await CloudBackupService.signOut();
     if (mounted) setState(() {});
-  }
-
-  void _webSignInNotice() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text(
-            'Google sign-in works in the Android app. On the web, your data is saved in this browser.')));
   }
 
   Future<void> _signInForBackup() async {
@@ -3590,7 +3585,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     width: double.infinity,
                     child: PressScale(
                       child: FilledButton.icon(
-                        onPressed: kIsWeb ? _webSignInNotice : _signInForBackup,
+                        onPressed: kIsWeb ? () => webSignInNotice(context) : _signInForBackup,
                         icon: const Icon(Icons.login_rounded),
                         label: const Text('Sign in with Google'),
                       ),
@@ -3889,4 +3884,11 @@ class StyledQrPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant StyledQrPainter old) =>
       old.qr != qr || old.st != st;
+}
+
+
+void webSignInNotice(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text(
+          'Google sign-in works in the Android app. On the web, your data is saved in this browser.')));
 }
