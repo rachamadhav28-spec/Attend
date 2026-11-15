@@ -1,6 +1,6 @@
 # Attend Privacy Policy
 
-Last updated: 9 November 2026
+Last updated: 15 November 2026
 
 Attend helps students track class attendance. This policy explains what the app stores and why.
 
@@ -8,14 +8,16 @@ Attend helps students track class attendance. This policy explains what the app 
 - **On your phone:** your name, course, year, state, subjects, class times, attendance records, holidays you add, and your settings.
 - **In the cloud, only if you sign in with Google:** your Google email address and a backup of the data above, so you can restore it after reinstalling the app. The backup is kept with Supabase and only your own account can read or change it.
 
+## Ads
+The Android app shows ads from Google AdMob. AdMob may use your device's advertising ID and similar data to show ads and measure how they perform. You can reset or delete your advertising ID, or opt out of ad personalisation, in your phone's Google settings. See Google's privacy policy at https://policies.google.com/privacy. The attendtrack.online website may also show Google ads.
+
 ## What the app does not do
 - It does not sell or share your data.
-- It does not show ads or use advertising trackers.
 - It does not read your contacts, location or messages.
 
 ## Permissions
-- **Camera:** to scan a QR code or photograph a timetable. Photos are read on your phone to find subject names and are not uploaded.
-- **Internet:** for Google sign-in and cloud backup.
+- **Camera:** to scan a classmate's QR code. Images are not saved or uploaded.
+- **Internet:** for Google sign-in, cloud backup and ads.
 
 ## Your choices
 - Use the app without signing in: data stays on your phone only.

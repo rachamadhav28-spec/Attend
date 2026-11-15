@@ -56,6 +56,8 @@ jobs:
           if 'android.permission.CAMERA' not in t:
               t = t.replace('<application', perms, 1)
           t = re.sub(r'android:label="[^"]*"', 'android:label="Attend"', t, count=1)
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in t:
+              t = re.sub(r'(<application[^>]*>)', r'\1\n        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1884341724758599~8559129715"/>', t, count=1)
           deep_link = ('<intent-filter>\n'
                        '    <action android:name="android.intent.action.VIEW" />\n'
                        '    <category android:name="android.intent.category.DEFAULT" />\n'

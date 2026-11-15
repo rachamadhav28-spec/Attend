@@ -17,6 +17,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ui_kit.dart';
 import 'timetable_reader.dart';
+import 'home_ad.dart';
 
 // ============================================================================
 // PASTE YOUR SUPABASE KEYS HERE (or share them with me and I will fill them in)
@@ -2187,9 +2188,15 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
           child: pages[_currentTab](),
         ),
       ),
-      bottomNavigationBar: AppNavBar(
-        index: _currentTab,
-        onTap: (idx) => setState(() => _currentTab = idx),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_currentTab == 0) const HomeBannerAd(),
+          AppNavBar(
+            index: _currentTab,
+            onTap: (idx) => setState(() => _currentTab = idx),
+          ),
+        ],
       ),
     );
   }
