@@ -1027,7 +1027,9 @@ class MainDashboardScreen extends StatefulWidget {
   State<MainDashboardScreen> createState() => _MainDashboardScreenState();
 }
 
-class _MainDashboardScreenState extends State<MainDashboardScreen> {
+class _MainDashboardScreenState extends State<MainDashboardScreen>
+    with WidgetsBindingObserver {
+  String _openedOn = DateFormat('yyyy-MM-dd').format(DateTime.now());
   int _currentTab = 0;
   String _userName = 'Student';
   String _userEmail = 'student@gmail.com';
@@ -1060,6 +1062,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _flashTimer?.cancel();
     super.dispose();
   }
@@ -1076,9 +1079,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _currentTab = widget.initialTab;
     _selectedDayMode = _resolveDayShort(0);
     _loadAllData();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    if (today == _openedOn) return;
+    setState(() {
+      _openedOn = today;
+      _selectedDayMode = _resolveDayShort(0);
+      _selectedCalendarDate = DateTime.now();
+    });
   }
 
   String _resolveDayShort(int offsetDays) {
