@@ -37,7 +37,7 @@ jobs:
           cp -r build/web/* _site/app/
           python3 tools/make_privacy.py
           printf 'User-agent: *\nAllow: /\nSitemap: https://attendtrack.online/sitemap.xml\n' > _site/robots.txt
-          printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://attendtrack.online/</loc></url><url><loc>https://attendtrack.online/privacy.html</loc></url></urlset>\n' > _site/sitemap.xml
+          printf '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://attendtrack.online/</loc></url><url><loc>https://attendtrack.online/privacy.html</loc></url><url><loc>https://attendtrack.online/75-percent-attendance-rule.html</loc></url><url><loc>https://attendtrack.online/how-many-classes-can-i-skip.html</loc></url><url><loc>https://attendtrack.online/attendance-percentage-calculator.html</loc></url></urlset>\n' > _site/sitemap.xml
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

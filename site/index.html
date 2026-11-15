@@ -140,8 +140,11 @@ footer a{color:#fff;margin-right:16px}
 <details><summary>Is AttendTrack free?</summary><p>Yes. The web app and the Android app are free to use.</p></details>
 <details><summary>Where is my data saved?</summary><p>On the web it is saved in your browser. In the Android app you can also back it up with Google sign-in.</p></details>
 </div></section>
+<section id="share"><div class="wrap"><h2>Tell your classmates</h2><p class="sub">Share the site with your class.</p>
+<a class="btn" style="background:var(--g);color:#fff;margin-top:0" id="wa" href="https://wa.me/?text=AttendTrack%20-%20free%20attendance%20tracker%20and%20bunk%20calculator%3A%20https%3A%2F%2Fattendtrack.online">Share on WhatsApp</a>
+<button class="btn o" id="cp" style="border:2px solid var(--g);color:var(--g);background:transparent;cursor:pointer;font:inherit;font-weight:700">Copy link</button></div></section>
 <div class="ad-slot" id="ad-bottom"></div>
-<footer><div class="wrap"><a href="privacy.html">Privacy policy</a> © AttendTrack</div></footer>
+<footer><div class="wrap"><a href="privacy.html">Privacy policy</a><a href="75-percent-attendance-rule.html">75% rule</a><a href="how-many-classes-can-i-skip.html">Classes you can skip</a><a href="attendance-percentage-calculator.html">Calculator</a> © AttendTrack</div></footer>
 <script>
 document.documentElement.classList.add('js');
 (function(){var els=document.querySelectorAll('.card,.rail figure,section h2,.sub');
@@ -172,4 +175,5 @@ if(pc>=z){var s=Math.floor(x/(z/100)-y+1e-9);r.className='res';m.textContent=s>0
 else{var n=Math.ceil((z*y-100*x)/(100-z)-1e-9);r.className='res low';m.textContent='Below '+z+'%. Attend the next '+n+' class'+(n>1?'es':'')+' in a row to get back.'}}
 [a,b,c].forEach(function(e){e.addEventListener('input',go)});go()})();
 </script>
-</body></html>
+<script>document.getElementById('cp').addEventListener('click',function(){var b=this;function ok(){b.textContent='Copied!';setTimeout(function(){b.textContent='Copy link'},1800)}
+if(navigator.clipboard){navigator.clipboard.writeText('https://attendtrack.online').then(ok,function(){})}else{ok()}});</script></body></html>
