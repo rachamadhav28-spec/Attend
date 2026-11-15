@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-// Google's test banner. Replace with the real ad unit ID from AdMob.
-const String kHomeBannerUnitId = 'ca-app-pub-3940256099942544/6300978111';
+// Real AdMob banner unit for the Home screen.
+const String kHomeBannerUnitId = 'ca-app-pub-1884341724758599/7964233346';
 
 bool _adsStarted = false;
 
