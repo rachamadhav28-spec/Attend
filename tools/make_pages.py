@@ -21,9 +21,9 @@ def page(slug, title, desc, body, extra=''):
 <title>{title} | AttendTrack</title>
 <meta name="description" content="{desc}">
 <link rel="canonical" href="https://attendtrack.online/{slug}">
-<link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192">
+<meta property="og:image" content="https://attendtrack.online/img/share.png"><link rel="icon" href="/favicon.ico" sizes="48x48"><link rel="icon" type="image/png" href="/icon-192.png" sizes="192x192">
 <style>{CSS}</style></head><body>
-<nav><div class="wrap"><a href="/"><b>AttendTrack</b></a><a href="/app/"><b>Open app</b></a></div></nav>
+<nav><div class="wrap"><a href="/" style="display:flex;align-items:center;gap:10px"><img src="/img/logo.png" alt="AttendTrack logo" width="34" height="34" style="border-radius:9px"><b>AttendTrack</b></a><a href="/app/"><b>Open app</b></a></div></nav>
 <main class="wrap"><h1>{title}</h1>{body}
 <div class="box"><b>Track it automatically.</b><p>AttendTrack counts every class and shows how many you can skip.</p><a class="btn" href="/app/">Open the web app</a><a class="btn" href="/#android">Get the Android app</a></div>
 <p class="links"><a href="/75-percent-attendance-rule.html">75% rule</a><a href="/how-many-classes-can-i-skip.html">Classes you can skip</a><a href="/attendance-percentage-calculator.html">Calculator</a></p>
