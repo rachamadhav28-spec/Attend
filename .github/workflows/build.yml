@@ -140,6 +140,9 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
+      - name: Patch the ads plugin for the latest Gradle
+        run: python3 tools/patch_ads.py
+
       - name: Generate Custom App Logo Icon
         run: |
           if [ -f "assets/icon/app_icon.png" ]; then
