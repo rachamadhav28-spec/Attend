@@ -1097,6 +1097,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     });
   }
 
+  DateTime _dateForDay(String d) {
+    const idx = {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6};
+    final now = DateTime.now();
+    final target = idx[d] ?? now.weekday;
+    return now.add(Duration(days: target - now.weekday));
+  }
+
   String _resolveDayShort(int offsetDays) {
     final dt = DateTime.now().add(Duration(days: offsetDays));
     switch (dt.weekday) {
@@ -2323,14 +2330,25 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
-              child: Text(
-                activeDay == 'All'
-                    ? 'All subjects (${_subjects.length})'
-                    : "${_fullDayNames[activeDay]}'s classes (${visibleSubjects.length})",
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: AppColors.ink),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activeDay == 'All'
+                        ? 'All subjects (${_subjects.length})'
+                        : "${_fullDayNames[activeDay]}'s classes (${visibleSubjects.length})",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: AppColors.ink),
+                  ),
+                  Text(
+                    activeDay == 'All'
+                        ? DateFormat('EEEE, d MMM yyyy').format(DateTime.now())
+                        : DateFormat('d MMM yyyy').format(_dateForDay(activeDay)),
+                    style: TextStyle(fontSize: 13, color: AppColors.muted),
+                  ),
+                ],
               ),
             ),
             TextButton.icon(
