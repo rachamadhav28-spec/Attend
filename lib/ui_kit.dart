@@ -443,7 +443,7 @@ class AppPill extends StatelessWidget {
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
               color: selected ? Colors.white : AppColors.ink,
             ),
-            child: Text(label),
+            child: Text(label, textAlign: TextAlign.center),
           ),
         ),
       ),

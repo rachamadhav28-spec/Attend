@@ -1045,7 +1045,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     'Wed',
     'Thu',
     'Fri',
-    'Sat'
+    'Sat',
+    'Sun'
   ];
   static const Map<String, String> _fullDayNames = {
     'Mon': 'Monday',
@@ -1054,6 +1055,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     'Thu': 'Thursday',
     'Fri': 'Friday',
     'Sat': 'Saturday',
+    'Sun': 'Sunday',
   };
   String _selectedDayMode = 'All';
   int? _flashIdx;
@@ -1098,7 +1100,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   }
 
   DateTime _dateForDay(String d) {
-    const idx = {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6};
+    const idx = {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6, 'Sun': 7};
     final now = DateTime.now();
     final target = idx[d] ?? now.weekday;
     return now.add(Duration(days: target - now.weekday));
@@ -1118,9 +1120,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
       case DateTime.friday:
         return 'Fri';
       case DateTime.saturday:
+        return 'Sat';
       case DateTime.sunday:
       default:
-        return 'Sat';
+        return 'Sun';
     }
   }
 
@@ -2316,7 +2319,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: AppPill(
-                    label: d,
+                    label: d == 'All'
+                        ? 'All'
+                        : '$d\n${_dateForDay(d).day}',
                     selected: activeDay == d,
                     onTap: () => setState(() => _selectedDayMode = d),
                   ),
