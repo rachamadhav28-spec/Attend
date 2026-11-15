@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -155,6 +157,17 @@ jobs:
 
       - name: Build Play Store AAB Bundle
         run: flutter build appbundle --release --no-shrink
+
+      - name: Name the APK for download
+        run: cp build/app/outputs/flutter-apk/app-release.apk Attend.apk
+
+      - name: Publish the APK for the website
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Attend (latest)
+          make_latest: true
+          files: Attend.apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
