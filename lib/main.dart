@@ -1310,6 +1310,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
 
       if (uniqueMap.containsKey(normKey)) {
         final existing = uniqueMap[normKey]!;
+        for (final d in existing.days) {
+          existing.daySlots.putIfAbsent(d, () => existing.slotFor(d));
+        }
+        for (final d in item.days) {
+          existing.daySlots.putIfAbsent(d, () => item.slotFor(d));
+        }
         final mergedDays = {...existing.days, ...item.days}.toList();
         existing.days = mergedDays.isNotEmpty ? mergedDays : ['Mon', 'Wed', 'Fri'];
       } else {
@@ -1329,6 +1335,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   static const _gptPrompt =
       'Read this timetable image. Reply with one line per subject and nothing else, '
       'exactly like this: Name | Mon 10:00 AM-11:00 AM, Tue 12:00 PM-01:00 PM. '
+      'Give every day its own time exactly as in the image (a subject can have a different time on different days). '
       'Merge repeated cells of the same subject. If a subject spans several hours '
       '(like 2:00 PM-5:00 PM) write the full range. Use 12-hour times with AM/PM. '
       'Skip breaks and lunch. Use the full subject names from the subject list if the image has one.';
@@ -1407,13 +1414,171 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
     );
   }
 
+
+  String _fmtTod(TimeOfDay t) {
+    final h = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final mm = t.minute.toString().padLeft(2, '0');
+    return '${h.toString().padLeft(2, '0')}:$mm ${t.period == DayPeriod.am ? 'AM' : 'PM'}';
+  }
+
+  String _hourLabel(int h24) {
+    final ap = h24 >= 12 ? 'PM' : 'AM';
+    var h = h24 % 12;
+    if (h == 0) h = 12;
+    return '${h.toString().padLeft(2, '0')}:00 $ap';
+  }
+
+  List<String> get _slotPresets {
+    final out = <String>[];
+    for (var h = 8; h <= 17; h++) {
+      out.add('${_hourLabel(h)} - ${_hourLabel(h + 1)}');
+    }
+    for (final s in kTimeSlots) {
+      if (!out.contains(s)) out.add(s);
+    }
+    return out;
+  }
+
+  Future<String?> _pickSlot(BuildContext ctx, String day, String? current) {
+    return showModalBottomSheet<String>(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (c) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Time for $day',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink)),
+              const SizedBox(height: 12),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final s in _slotPresets)
+                        GestureDetector(
+                          onTap: () => Navigator.pop(c, s),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: s == current
+                                  ? AppColors.primary
+                                  : AppColors.tint,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(s,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: s == current
+                                        ? Colors.white
+                                        : AppColors.primary)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final st = await showTimePicker(
+                        context: c,
+                        initialTime: const TimeOfDay(hour: 9, minute: 0),
+                        helpText: 'Start time');
+                    if (st == null || !c.mounted) return;
+                    final en = await showTimePicker(
+                        context: c,
+                        initialTime: TimeOfDay(
+                            hour: (st.hour + 1) % 24, minute: st.minute),
+                        helpText: 'End time');
+                    if (en == null || !c.mounted) return;
+                    Navigator.pop(c, '${_fmtTod(st)} - ${_fmtTod(en)}');
+                  },
+                  icon: const Icon(Icons.access_time_rounded),
+                  label: const Text('Custom time...'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _daySlotRows(
+      BuildContext ctx,
+      List<String> days,
+      Map<String, String> daySlots,
+      String fallback,
+      void Function(VoidCallback) setS) {
+    return Column(
+      children: [
+        for (final d in _weekDays.where(days.contains))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                SizedBox(
+                    width: 44,
+                    child: Text(d,
+                        style: TextStyle(
+                            color: AppColors.muted,
+                            fontWeight: FontWeight.w600))),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () async {
+                      final v = await _pickSlot(
+                          ctx, _fullDayNames[d] ?? d, daySlots[d] ?? fallback);
+                      if (v != null) setS(() => daySlots[d] = v);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.tint,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(daySlots[d] ?? fallback,
+                                style: TextStyle(
+                                    fontSize: 13, color: AppColors.ink)),
+                          ),
+                          Icon(Icons.arrow_drop_down,
+                              color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   void _showEditScannedTimetableDialog(List<SubjectModel> draftList) {
     final List<TextEditingController> ctrls =
         draftList.map((s) => TextEditingController(text: s.name)).toList();
     final List<String> slotList = draftList.map((s) {
-      return kTimeSlots.contains(s.scheduleSlot)
-          ? s.scheduleSlot
-          : kTimeSlots.first;
+      return s.scheduleSlot;
     }).toList();
     final List<List<String>> daysList =
         draftList.map((s) => List<String>.from(s.days)).toList();
@@ -1482,36 +1647,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                             ],
                           ),
                           const SizedBox(height: 6),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: kTimeSlots.map((slot) {
-                              final sel = slotList[idx] == slot;
-                              return GestureDetector(
-                                onTap: () => setDialogState(
-                                    () => slotList[idx] = slot),
-                                child: AnimatedContainer(
-                                  duration: kFast,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: sel
-                                        ? AppColors.primary
-                                        : AppColors.tint,
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(slot,
-                                      style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          color: sel
-                                              ? Colors.white
-                                              : AppColors.primary)),
-                                ),
-                              );
-                            }).toList(),
-                          ),
                           const SizedBox(height: 6),
                           Wrap(
                             spacing: 4,
@@ -1533,6 +1668,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                               );
                             }).toList(),
                           ),
+                          const SizedBox(height: 8),
+                          _daySlotRows(ctx, daysList[idx], dsList[idx],
+                              slotList[idx], setDialogState),
                         ],
                       ),
                     );
@@ -1565,14 +1703,22 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                   final text = ctrls[i].text.trim();
                   if (text.isNotEmpty) {
                     finalSubs.add(
-                      SubjectModel(
-                        name: text,
-                        scheduleSlot: slotList[i],
-                        daySlots: dsList[i],
-                        days: daysList[i].isEmpty
+                      () {
+                        final dl = daysList[i].isEmpty
                             ? ['Mon', 'Wed', 'Fri']
-                            : daysList[i],
-                      ),
+                            : daysList[i];
+                        final ds = {
+                          for (final d in dl) d: dsList[i][d] ?? slotList[i]
+                        };
+                        final first = _weekDays.firstWhere(dl.contains,
+                            orElse: () => 'Mon');
+                        return SubjectModel(
+                          name: text,
+                          scheduleSlot: ds[first] ?? slotList[i],
+                          daySlots: ds,
+                          days: dl,
+                        );
+                      }(),
                     );
                   }
                 }
@@ -1594,10 +1740,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
   void _showEditSingleSubjectDialog(int subIndex) {
     final sub = _subjects[subIndex];
     final nameCtrl = TextEditingController(text: sub.name);
-    final isCustom = !kTimeSlots.contains(sub.scheduleSlot);
-    String selectedSlot = isCustom ? '__custom__' : sub.scheduleSlot;
-    final customCtrl = TextEditingController(
-        text: isCustom ? sub.scheduleSlot : '');
+    final String baseSlot = sub.scheduleSlot;
     final attCtrl = TextEditingController(text: sub.attendedHours.toString());
     final totCtrl = TextEditingController(text: sub.totalHours.toString());
     final List<String> selectedDays = List<String>.from(sub.days);
@@ -1623,75 +1766,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                   controller: nameCtrl,
                   decoration: const InputDecoration(labelText: 'Subject Name'),
                 ),
-                const SizedBox(height: 14),
-                Text('Class time',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                        color: AppColors.ink)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ...kTimeSlots.map((slot) {
-                      final sel = selectedSlot == slot;
-                      return GestureDetector(
-                        onTap: () =>
-                            setDialogState(() => selectedSlot = slot),
-                        child: AnimatedContainer(
-                          duration: kFast,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: sel ? AppColors.primary : AppColors.tint,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(slot,
-                              style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: sel
-                                      ? Colors.white
-                                      : AppColors.primary)),
-                        ),
-                      );
-                    }),
-                    GestureDetector(
-                      onTap: () => setDialogState(
-                          () => selectedSlot = '__custom__'),
-                      child: AnimatedContainer(
-                        duration: kFast,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: selectedSlot == '__custom__'
-                              ? AppColors.primary
-                              : AppColors.tint,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text('Custom',
-                            style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: selectedSlot == '__custom__'
-                                    ? Colors.white
-                                    : AppColors.primary)),
-                      ),
-                    ),
-                  ],
-                ),
-                if (selectedSlot == '__custom__') ...[
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: customCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'e.g. 08:00 AM - 09:00 AM',
-                      prefixIcon: Icon(Icons.access_time_rounded),
-                      isDense: true,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1747,35 +1821,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                           fontWeight: FontWeight.w600,
                           fontSize: 13,
                           color: AppColors.ink)),
-                  for (final d in _weekDays.where(selectedDays.contains))
-                    Row(children: [
-                      SizedBox(
-                          width: 44,
-                          child: Text(d,
-                              style: TextStyle(color: AppColors.muted))),
-                      Expanded(
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: () {
-                            final cur = daySlots[d] ??
-                                (selectedSlot == '__custom__'
-                                    ? customCtrl.text.trim()
-                                    : selectedSlot);
-                            return kTimeSlots.contains(cur) ? cur : null;
-                          }(),
-                          hint: const Text('Same as above'),
-                          items: [
-                            for (final t in kTimeSlots)
-                              DropdownMenuItem(
-                                  value: t,
-                                  child: Text(t,
-                                      style: const TextStyle(fontSize: 13)))
-                          ],
-                          onChanged: (v) =>
-                              setDialogState(() => daySlots[d] = v!),
-                        ),
-                      ),
-                    ]),
+                  const SizedBox(height: 8),
+                  _daySlotRows(ctx, selectedDays, daySlots, baseSlot,
+                      setDialogState),
                 ],
               ],
             ),
@@ -1801,16 +1849,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen>
                   _subjects[subIndex].name = nameCtrl.text.trim().isEmpty
                       ? _subjects[subIndex].name
                       : nameCtrl.text.trim();
-                  _subjects[subIndex].scheduleSlot =
-                      selectedSlot == '__custom__'
-                          ? (customCtrl.text.trim().isEmpty
-                              ? kTimeSlots.first
-                              : customCtrl.text.trim())
-                          : selectedSlot;
-                  _subjects[subIndex].daySlots = {
-                    for (final e in daySlots.entries)
-                      if (selectedDays.contains(e.key)) e.key: e.value
-                  };
+                  final dl = selectedDays.isEmpty
+                      ? ['Mon', 'Wed', 'Fri']
+                      : selectedDays;
+                  final ds = {for (final d in dl) d: daySlots[d] ?? baseSlot};
+                  final firstDay = _weekDays.firstWhere(dl.contains,
+                      orElse: () => 'Mon');
+                  _subjects[subIndex].scheduleSlot = ds[firstDay] ?? baseSlot;
+                  _subjects[subIndex].daySlots = ds;
                   _subjects[subIndex].attendedHours = att < 0 ? 0 : att;
                   _subjects[subIndex].totalHours = tot < att ? att : tot;
                   _subjects[subIndex].days = selectedDays.isEmpty
